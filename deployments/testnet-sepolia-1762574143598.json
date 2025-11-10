@@ -1,0 +1,23 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "timestamp": "2025-11-08T03:55:43.597Z",
+  "deployer": "0x6D51d80017C66afBeD44D50c775f46C60Bbb56af",
+  "contracts": {
+    "token": {
+      "proxy": "0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86",
+      "implementation": "0x0ed9f9a71c5FB7f432BEdD4aF04dEA4B28Be58D2"
+    },
+    "staking": {
+      "proxy": "0xf22381517A98206831691fd6A8c020B982a939a1",
+      "implementation": "0x6D938b4C48300A29905FBa272cCdC1207538865f"
+    },
+    "timelock": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02"
+  },
+  "config": {
+    "timelockDelay": 300,
+    "stakingAPR": 10,
+    "minStakingPeriod": 300,
+    "rewardPoolFunded": "100000.0"
+  }
+}

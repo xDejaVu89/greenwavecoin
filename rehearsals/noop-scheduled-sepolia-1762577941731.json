@@ -1,0 +1,12 @@
+{
+  "kind": "noop",
+  "action": "scheduled",
+  "network": "sepolia",
+  "tokenProxy": "0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86",
+  "timelock": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02",
+  "implementation": "0x6c0Ab122473DAb683e8Ab8d20B326535db76a9fF",
+  "operationId": "0x5091a50f7c68d00ec18bf19fa3e8bbaed616eb72ffd6b72a093f09e576becf99",
+  "salt": "0x91b8a15ac5a221d6cf58bad9353109be18be833cac9360de03d4c7d258b96922",
+  "minDelay": "300",
+  "timestamp": "2025-11-08T04:59:01.731Z"
+}

@@ -1,0 +1,88 @@
+{
+  "apps": [
+    {
+      "name": "greenwavecoin-monitor-mainnet",
+      "script": "npx",
+      "args": "hardhat run scripts/monitor-contracts.ts --network mainnet",
+      "cwd": "./",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "200M",
+      "env": {
+        "NODE_ENV": "production"
+      },
+      "cron_restart": "*/15 * * * *",
+      "error_file": "./logs/monitor-error.log",
+      "out_file": "./logs/monitor-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    },
+    {
+      "name": "greenwavecoin-noop-testnet",
+      "script": "npx",
+      "args": "hardhat run scripts/soak/governance-noop.ts --network sepolia",
+      "cwd": "./",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "150M",
+      "env": { "NODE_ENV": "development" },
+      "cron_restart": "*/20 * * * *",
+      "error_file": "./logs/noop-error.log",
+      "out_file": "./logs/noop-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    },
+    {
+      "name": "greenwavecoin-daily-metrics-testnet",
+      "script": "npx",
+      "args": "hardhat run scripts/monitor-contracts.ts --network sepolia",
+      "cwd": "./",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "150M",
+      "env": { "NODE_ENV": "development" },
+      "cron_restart": "0 */6 * * *",
+      "error_file": "./logs/metrics-error.log",
+      "out_file": "./logs/metrics-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    },
+    {
+      "name": "greenwavecoin-daily-digest-testnet",
+      "script": "npx",
+      "args": "hardhat run scripts/soak/daily-digest.ts --network sepolia",
+      "cwd": "./",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "150M",
+      "env": { "NODE_ENV": "development" },
+      "cron_restart": "5 0 * * *",
+      "error_file": "./logs/digest-error.log",
+      "out_file": "./logs/digest-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    },
+    {
+      "name": "greenwavecoin-monitor-testnet",
+      "script": "npx",
+      "args": "hardhat run scripts/monitor-contracts.ts --network sepolia",
+      "cwd": "./",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "max_memory_restart": "200M",
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "cron_restart": "*/30 * * * *",
+      "error_file": "./logs/monitor-testnet-error.log",
+      "out_file": "./logs/monitor-testnet-out.log",
+      "log_date_format": "YYYY-MM-DD HH:mm:ss Z",
+      "merge_logs": true
+    }
+  ]
+}

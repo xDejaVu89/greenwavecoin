@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "node16",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node16"
+  },
+  // We run tests via Hardhat/ts-node (transpileOnly), so exclude tests from tsc typecheck.
+  // This avoids ESM/CJS friction with chai v6 and typechain casting noise in tests.
+  "include": ["./scripts"],
+  "exclude": [
+    "./test/**",
+    "./scripts/debugFlash.ts",
+    "./node_modules/**",
+    "./artifacts/**",
+    "./cache/**",
+    "./typechain-types/**"
+  ],
+  "files": ["./hardhat.config.ts"]
+}

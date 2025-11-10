@@ -1,0 +1,282 @@
+{
+  "contract": "GreenWaveCoin",
+  "timestamp": "2025-11-08T00:46:54.759Z",
+  "slots": [
+    {
+      "label": "_initialized",
+      "slot": 0,
+      "offset": 0,
+      "type": "uint8"
+    },
+    {
+      "label": "_initializing",
+      "slot": 0,
+      "offset": 1,
+      "type": "bool"
+    },
+    {
+      "label": "__gap",
+      "slot": 1,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "_balances",
+      "slot": 51,
+      "offset": 0,
+      "type": "mapping(address => uint256)"
+    },
+    {
+      "label": "_allowances",
+      "slot": 52,
+      "offset": 0,
+      "type": "mapping(address => mapping(address => uint256))"
+    },
+    {
+      "label": "_totalSupply",
+      "slot": 53,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "_name",
+      "slot": 54,
+      "offset": 0,
+      "type": "string"
+    },
+    {
+      "label": "_symbol",
+      "slot": 55,
+      "offset": 0,
+      "type": "string"
+    },
+    {
+      "label": "__gap",
+      "slot": 56,
+      "offset": 0,
+      "type": "uint256[45]"
+    },
+    {
+      "label": "__gap",
+      "slot": 101,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "_hashedName",
+      "slot": 151,
+      "offset": 0,
+      "type": "bytes32"
+    },
+    {
+      "label": "_hashedVersion",
+      "slot": 152,
+      "offset": 0,
+      "type": "bytes32"
+    },
+    {
+      "label": "_name",
+      "slot": 153,
+      "offset": 0,
+      "type": "string"
+    },
+    {
+      "label": "_version",
+      "slot": 154,
+      "offset": 0,
+      "type": "string"
+    },
+    {
+      "label": "__gap",
+      "slot": 155,
+      "offset": 0,
+      "type": "uint256[48]"
+    },
+    {
+      "label": "_nonces",
+      "slot": 203,
+      "offset": 0,
+      "type": "mapping(address => struct CountersUpgradeable.Counter)"
+    },
+    {
+      "label": "_PERMIT_TYPEHASH_DEPRECATED_SLOT",
+      "slot": 204,
+      "offset": 0,
+      "type": "bytes32"
+    },
+    {
+      "label": "__gap",
+      "slot": 205,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "_delegates",
+      "slot": 254,
+      "offset": 0,
+      "type": "mapping(address => address)"
+    },
+    {
+      "label": "_checkpoints",
+      "slot": 255,
+      "offset": 0,
+      "type": "mapping(address => struct ERC20VotesUpgradeable.Checkpoint[])"
+    },
+    {
+      "label": "_totalSupplyCheckpoints",
+      "slot": 256,
+      "offset": 0,
+      "type": "struct ERC20VotesUpgradeable.Checkpoint[]"
+    },
+    {
+      "label": "__gap",
+      "slot": 257,
+      "offset": 0,
+      "type": "uint256[47]"
+    },
+    {
+      "label": "_paused",
+      "slot": 304,
+      "offset": 0,
+      "type": "bool"
+    },
+    {
+      "label": "__gap",
+      "slot": 305,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "_owner",
+      "slot": 354,
+      "offset": 0,
+      "type": "address"
+    },
+    {
+      "label": "__gap",
+      "slot": 355,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "_status",
+      "slot": 404,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "__gap",
+      "slot": 405,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "__gap",
+      "slot": 454,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "__gap",
+      "slot": 504,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "timelockEnabled",
+      "slot": 554,
+      "offset": 0,
+      "type": "bool"
+    },
+    {
+      "label": "timelock",
+      "slot": 554,
+      "offset": 1,
+      "type": "address"
+    },
+    {
+      "label": "flashProtectionEnabled",
+      "slot": 554,
+      "offset": 21,
+      "type": "bool"
+    },
+    {
+      "label": "maxTransfersPerBlock",
+      "slot": 555,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "maxTransferAmount",
+      "slot": 556,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "lastTransferBlock",
+      "slot": 557,
+      "offset": 0,
+      "type": "mapping(address => uint256)"
+    },
+    {
+      "label": "transfersInCurrentBlock",
+      "slot": 558,
+      "offset": 0,
+      "type": "mapping(address => uint256)"
+    },
+    {
+      "label": "delegationCounts",
+      "slot": 559,
+      "offset": 0,
+      "type": "mapping(address => uint256)"
+    },
+    {
+      "label": "maxDelegations",
+      "slot": 560,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "stakingContract",
+      "slot": 561,
+      "offset": 0,
+      "type": "address"
+    },
+    {
+      "label": "treasury",
+      "slot": 562,
+      "offset": 0,
+      "type": "address"
+    },
+    {
+      "label": "transactionFee",
+      "slot": 563,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "burnShare",
+      "slot": 564,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "stakingShare",
+      "slot": 565,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "_inFeeDistribution",
+      "slot": 566,
+      "offset": 0,
+      "type": "bool"
+    },
+    {
+      "label": "__gap",
+      "slot": 567,
+      "offset": 0,
+      "type": "uint256[50]"
+    }
+  ]
+}

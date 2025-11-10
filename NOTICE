@@ -1,0 +1,344 @@
+NOTICES AND INFORMATION
+========================
+
+This file contains notices and information required by libraries that this project uses.
+
+---
+
+## OpenZeppelin Contracts Upgradeable
+
+**License**: MIT  
+**Copyright**: Copyright (c) 2016-2024 Zeppelin Solutions SL  
+**Repository**: https://github.com/OpenZeppelin/openzeppelin-contracts-upgradeable  
+**Version**: 4.9.3
+
+```
+MIT License
+
+Copyright (c) 2016-2024 Zeppelin Solutions SL
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+**Components Used**:
+- `ERC20Upgradeable`: Base token functionality
+- `ERC20BurnableUpgradeable`: Token burning capability
+- `ERC20PausableUpgradeable`: Emergency pause functionality
+- `ERC20VotesUpgradeable`: Governance voting capabilities
+- `AccessControlUpgradeable`: Role-based access control
+- `UUPSUpgradeable`: Proxy upgrade mechanism
+- `ReentrancyGuardUpgradeable`: Reentrancy attack protection
+- `PausableUpgradeable`: Pausable functionality for staking contract
+- `TimelockControllerUpgradeable`: Governance timelock
+
+**Modifications**: No modifications made to OpenZeppelin code. Used as-is via inheritance.
+
+**Security Audits**: OpenZeppelin contracts are professionally audited. See: https://docs.openzeppelin.com/contracts/5.x/#security
+
+---
+
+## Hardhat
+
+**License**: MIT  
+**Copyright**: Copyright (c) 2019 Nomic Labs LLC  
+**Repository**: https://github.com/NomicFoundation/hardhat  
+**Version**: ^2.22.0
+
+```
+MIT License
+
+Copyright (c) 2019 Nomic Labs LLC
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+**Usage**: Development framework for compiling, testing, and deploying smart contracts.
+
+---
+
+## Ethers.js
+
+**License**: MIT  
+**Copyright**: Copyright (c) 2019 Richard Moore  
+**Repository**: https://github.com/ethers-io/ethers.js  
+**Version**: ^6.13.0
+
+```
+MIT License
+
+Copyright (c) 2019 Richard Moore
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+**Usage**: Library for interacting with Ethereum blockchain in tests and scripts.
+
+---
+
+## TypeScript
+
+**License**: Apache License 2.0  
+**Copyright**: Copyright (c) Microsoft Corporation  
+**Repository**: https://github.com/microsoft/TypeScript  
+**Version**: ^5.7.2
+
+```
+Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+[Full Apache 2.0 license text - see: https://www.apache.org/licenses/LICENSE-2.0]
+```
+
+**Usage**: Programming language for development tooling and scripts.
+
+---
+
+## Chai
+
+**License**: MIT  
+**Copyright**: Copyright (c) 2017 Chai.js Assertion Library  
+**Repository**: https://github.com/chaijs/chai  
+**Version**: ^4.3.10
+
+```
+MIT License
+
+Copyright (c) 2017 Chai.js Assertion Library
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+**Usage**: Assertion library for testing smart contracts.
+
+---
+
+## Solidity
+
+**License**: GPL-3.0  
+**Copyright**: Copyright (c) 2014-2024 Ethereum Foundation  
+**Repository**: https://github.com/ethereum/solidity  
+**Version**: 0.8.28
+
+```
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (c) 2014-2024 Ethereum Foundation
+
+[Full GPL-3.0 license text - see: https://www.gnu.org/licenses/gpl-3.0.txt]
+```
+
+**Usage**: Smart contract programming language.
+
+**Note**: Smart contracts compiled with Solidity do NOT inherit GPL-3.0 license unless explicitly stated. Our smart contracts are under MIT license (see LICENSE file in root).
+
+---
+
+## Hardhat Plugins
+
+### @nomicfoundation/hardhat-toolbox
+**License**: MIT  
+**Version**: ^5.0.0  
+**Purpose**: Bundle of essential Hardhat plugins
+
+### @nomicfoundation/hardhat-verify
+**License**: MIT  
+**Version**: ^2.0.0  
+**Purpose**: Contract verification on Etherscan
+
+### hardhat-gas-reporter
+**License**: MIT  
+**Copyright**: Copyright (c) 2017 Chris Gewecke  
+**Version**: ^2.2.0  
+**Purpose**: Gas usage reporting for tests
+
+### solidity-coverage
+**License**: ISC  
+**Copyright**: Copyright (c) 2016 Chris Gewecke  
+**Version**: ^0.8.0  
+**Purpose**: Code coverage for Solidity testing
+
+---
+
+## Development Dependencies
+
+### @typechain/ethers-v6
+**License**: MIT  
+**Version**: ^0.5.0  
+**Purpose**: TypeScript bindings for ethers.js v6
+
+### @typechain/hardhat
+**License**: MIT  
+**Version**: ^9.0.0  
+**Purpose**: TypeScript bindings for Hardhat
+
+### @types/chai
+**License**: MIT  
+**Version**: ^4.3.5  
+**Purpose**: TypeScript definitions for Chai
+
+### @types/mocha
+**License**: MIT  
+**Version**: ^10.0.1  
+**Purpose**: TypeScript definitions for Mocha
+
+### @types/node
+**License**: MIT  
+**Version**: ^22.10.1  
+**Purpose**: TypeScript definitions for Node.js
+
+### ts-node
+**License**: MIT  
+**Version**: ^10.9.1  
+**Purpose**: TypeScript execution engine for Node.js
+
+---
+
+## Testing Frameworks
+
+### Mocha
+**License**: MIT  
+**Copyright**: Copyright (c) 2011-2024 OpenJS Foundation and contributors  
+**Repository**: https://github.com/mochajs/mocha  
+**Version**: ^10.0.0 (via Hardhat)
+
+```
+MIT License
+
+Copyright (c) 2011-2024 OpenJS Foundation and contributors
+
+[Standard MIT license - see above for full text]
+```
+
+**Usage**: JavaScript test framework for running smart contract tests.
+
+---
+
+## Additional Notices
+
+### No Warranty
+
+ALL THIRD-PARTY SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+### Security Considerations
+
+While we use industry-standard, audited libraries (especially OpenZeppelin), users should:
+1. Review all dependencies before using in production
+2. Monitor security advisories for updates
+3. Conduct independent security audits
+4. Follow best practices for smart contract deployment
+
+### Dependency Versions
+
+All versions listed are as of the initial release. For current versions, see `package.json`.
+
+### Updating Dependencies
+
+When updating dependencies, especially OpenZeppelin contracts:
+1. Review changelog for breaking changes
+2. Check for security patches
+3. Re-run full test suite
+4. Consider re-audit if major version changes
+
+### Additional Resources
+
+**OpenZeppelin Security**: https://docs.openzeppelin.com/contracts/5.x/security  
+**Hardhat Documentation**: https://hardhat.org/docs  
+**Ethers.js Documentation**: https://docs.ethers.org/v6/  
+**Solidity Documentation**: https://docs.soliditylang.org/
+
+---
+
+## GreenWaveCoin License
+
+The GreenWaveCoin smart contracts and associated code (excluding third-party dependencies) are licensed under the MIT License. See the LICENSE file in the root of this repository for details.
+
+**Copyright (c) 2024 GreenWaveCoin Project**
+
+---
+
+## Questions or Concerns
+
+If you have questions about licensing or attribution:
+- Email: legal@greenwavecoin.io
+- GitHub: https://github.com/yourorg/greenwavecoin/issues
+
+For security concerns about dependencies:
+- Email: security@greenwavecoin.io
+
+---
+
+**Last Updated**: December 2024  
+**Document Version**: 1.0
+
+This NOTICE file will be updated as dependencies are added, removed, or updated.

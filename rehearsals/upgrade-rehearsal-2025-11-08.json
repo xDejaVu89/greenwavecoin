@@ -1,0 +1,24 @@
+{
+  "date": "2025-11-08T04:15:00Z",
+  "network": "sepolia",
+  "tokenProxy": "0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86",
+  "timelock": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02",
+  "oldImplementation": "0x0ed9f9a71c5FB7f432BEdD4aF04dEA4B28Be58D2",
+  "newImplementation": "0x6c0Ab122473DAb683e8Ab8d20B326535db76a9fF",
+  "operationId": "0xa897cc14e6a7dcbe6409a33750a8096ce82287032fdee62dab3dac39c540d376",
+  "minDelaySeconds": 300,
+  "executionTxHash": "0x06d2a5f98d9c03c6c79a056101b50c83352f1f7a0752be05d3082df9c802af63",
+  "postUpgradeVersion": 2,
+  "smokeTests": {
+    "passed": 8,
+    "failed": 0,
+    "notes": "All invariants held; fee logic, timelock ownership, staking functional after upgrade."
+  },
+  "storageLayoutDiff": "None (append-only, unchanged)",
+  "notes": [
+    "Upgrade rehearsed successfully with 5m timelock delay.",
+    "Implementation address changed as expected; version() returns 2.",
+    "No storage layout changes flagged by validation script.",
+    "Next: monitor metrics and prepare mainnet timelock (24h)."
+  ]
+}

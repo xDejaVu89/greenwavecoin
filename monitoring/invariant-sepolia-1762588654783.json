@@ -1,0 +1,34 @@
+{
+  "timestamp": "2025-11-08T07:57:34.782Z",
+  "network": "sepolia",
+  "contracts": {
+    "token": "0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86",
+    "staking": "0xf22381517A98206831691fd6A8c020B982a939a1",
+    "timelock": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02"
+  },
+  "supply": "999980000000000000000000",
+  "balances": {
+    "deployer": "890050000000000000000000",
+    "treasury": "890050000000000000000000",
+    "staking": "100230000000000000000000"
+  },
+  "fees": {
+    "transactionFee": "100",
+    "burnShare": "2000",
+    "stakingShare": "3000"
+  },
+  "staking": {
+    "totalStaked": "200000000000000000000",
+    "rewardPool": "100000000000000000000000"
+  },
+  "flashProtection": {
+    "enabled": true,
+    "maxTransfersPerBlock": "5",
+    "maxTransferAmount": "10000000000000000000000"
+  },
+  "paused": false,
+  "stakingContractSet": "0xf22381517A98206831691fd6A8c020B982a939a1",
+  "invariants": {
+    "failures": []
+  }
+}

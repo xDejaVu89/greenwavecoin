@@ -1,0 +1,108 @@
+{
+  "contract": "GreenWaveStaking",
+  "timestamp": "2025-11-08T04:00:47.110Z",
+  "slots": [
+    {
+      "label": "_initialized",
+      "slot": 0,
+      "offset": 0,
+      "type": "uint8"
+    },
+    {
+      "label": "_initializing",
+      "slot": 0,
+      "offset": 1,
+      "type": "bool"
+    },
+    {
+      "label": "__gap",
+      "slot": 1,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "_owner",
+      "slot": 51,
+      "offset": 0,
+      "type": "address"
+    },
+    {
+      "label": "__gap",
+      "slot": 52,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "_paused",
+      "slot": 101,
+      "offset": 0,
+      "type": "bool"
+    },
+    {
+      "label": "__gap",
+      "slot": 102,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "_status",
+      "slot": 151,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "__gap",
+      "slot": 152,
+      "offset": 0,
+      "type": "uint256[49]"
+    },
+    {
+      "label": "__gap",
+      "slot": 201,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "__gap",
+      "slot": 251,
+      "offset": 0,
+      "type": "uint256[50]"
+    },
+    {
+      "label": "token",
+      "slot": 301,
+      "offset": 0,
+      "type": "contract IERC20Upgradeable"
+    },
+    {
+      "label": "rewardRate",
+      "slot": 302,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "minimumStakingPeriod",
+      "slot": 303,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "stakes",
+      "slot": 304,
+      "offset": 0,
+      "type": "mapping(address => struct GreenWaveStaking.Stake)"
+    },
+    {
+      "label": "totalStaked",
+      "slot": 305,
+      "offset": 0,
+      "type": "uint256"
+    },
+    {
+      "label": "rewardPool",
+      "slot": 306,
+      "offset": 0,
+      "type": "uint256"
+    }
+  ]
+}

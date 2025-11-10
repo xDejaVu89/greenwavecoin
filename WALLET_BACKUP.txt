@@ -1,0 +1,20 @@
+WALLET BACKUP INFORMATION
+DO NOT SHARE OR COMMIT THIS FILE
+
+Address: 0xA90Aaf362b047481C4033Ec26b19264eAC2e94c4
+
+Mnemonic (12 words):
+below humor humble elbow advice plug bid end owner quick raw struggle
+
+Private Key:
+0x019760add6194fd215f3a95265c311c088df684ec019533a45f4f36910eec968
+
+Recovery Instructions:
+1. Import using the 12-word mnemonic in your wallet software
+2. Alternatively, import using the private key
+3. Verify the address matches after import
+4. Never share these credentials
+5. Store this file securely offline
+
+Network: Polygon Amoy Testnet
+Token Contract: 0x0ed9f9a71c5FB7f432BEdD4aF04dEA4B28Be58D2

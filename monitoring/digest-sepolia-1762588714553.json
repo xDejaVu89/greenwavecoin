@@ -1,0 +1,33 @@
+{
+  "timestamp": "2025-11-08T07:58:34.553Z",
+  "network": "sepolia",
+  "metricsCount": 2,
+  "invariantCount": 2,
+  "alertCount": 0,
+  "lastMetrics": {
+    "timestamp": "2025-11-08T04:59:18.498Z",
+    "network": "sepolia",
+    "token": {
+      "address": "0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86",
+      "totalSupply": "999980.0",
+      "isPaused": false,
+      "owner": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02",
+      "flashProtectionEnabled": true,
+      "transactionFee": "100"
+    },
+    "staking": {
+      "address": "0xf22381517A98206831691fd6A8c020B982a939a1",
+      "totalStaked": "200.0",
+      "rewardPool": "100000.0",
+      "rewardRate": "1000",
+      "isPaused": false,
+      "owner": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02"
+    },
+    "alerts": [],
+    "timelock": {
+      "address": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02",
+      "minDelay": "300"
+    }
+  },
+  "lastAlerts": []
+}
