@@ -35,7 +35,7 @@ GreenWaveCoin (GWC) is a comprehensive token ecosystem featuring:
 - **Transparent Events**: All state changes emit events
 
 ### 💰 Tokenomics
-- **Total Supply**: 1,000,000 GWC (fixed)
+- **Total Supply**: 21,000,000 GWC (fixed)
 - **Transaction Fee**: 1% (configurable)
 - **Fee Distribution**: 20% burn, 30% staking, 50% treasury
 - **Staking APR**: 10% (configurable)
