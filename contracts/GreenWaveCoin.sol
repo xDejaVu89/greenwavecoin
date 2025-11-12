@@ -141,8 +141,8 @@ contract GreenWaveCoin is
         address treasury_
     ) public initializer {
         _initBase(name_, symbol_, owner_, treasury_);
-        // Default initial supply for tests/local flows: 1,000,000 tokens
-        _mint(owner_, 1_000_000 * 10 ** decimals());
+        // Default initial supply: 21,000,000 tokens (21M GWC)
+        _mint(owner_, 21_000_000 * 10 ** decimals());
     }
 
     /**
