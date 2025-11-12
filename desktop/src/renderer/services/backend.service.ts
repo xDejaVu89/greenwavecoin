@@ -56,7 +56,7 @@ export interface MerkleProofResponse {
 
 
 
-async function pingHealth(timeoutMs = 600): Promise<boolean> {
+export async function pingHealth(timeoutMs = 600): Promise<boolean> {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
