@@ -3,8 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' http://localhost:3000 http://127.0.0.1:3000 ws://localhost:5173 ws://127.0.0.1:5173; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline';">
     <title>GreenWaveCoin Desktop</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #1a1a1a !important;
+        color: #ffffff !important;
+      }
+      #root {
+        min-height: 100vh;
+        background-color: #1a1a1a !important;
+      }
+      /* Force all text to be visible */
+      p, span, div, h1, h2, h3, h4, h5, h6, label {
+        color: #e5e5e5 !important;
+      }
+      /* Ensure white backgrounds are changed to dark */
+      .bg-white {
+        background-color: #2d2d2d !important;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>

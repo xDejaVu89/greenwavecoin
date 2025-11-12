@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { nodePolyfills } from 'vite-plugin-node-polyfills';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    nodePolyfills({ protocolImports: true }),
+  ],
   base: './',
   build: {
     outDir: 'dist/renderer',
@@ -15,6 +19,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src/renderer'),
+      buffer: 'buffer',
     },
+  },
+  define: {
+    'process.env': {},
   },
 });

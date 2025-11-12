@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import rewardsRouter from './routes/rewards.routes';
 import { tasksRouter } from './routes/tasks.routes';
 import { resultsRouter } from './routes/results.routes';
+import fahRouter from './routes/fah.routes';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -34,6 +35,7 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api/rewards', rewardsRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/results', resultsRouter);
+app.use('/api/fah', fahRouter);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: any) => {

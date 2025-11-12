@@ -58,42 +58,43 @@ function Compute() {
   const estimatedRewards = status?.pointsEarned ? (status.pointsEarned / 1000).toFixed(3) : '0.000';
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <h1>Compute Contribution</h1>
-      <p>Contribute to scientific research and earn GWC tokens</p>
+    <div style={{ padding: '2rem', background: '#1a1a1a', minHeight: '100vh', color: '#e5e5e5' }}>
+      <h1 style={{ color: '#e5e5e5' }}>Compute Contribution</h1>
+      <p style={{ color: '#e5e5e5' }}>Contribute to scientific research and earn GWC tokens</p>
 
       {fahInstalled === false && (
-        <div style={{ 
-          background: '#fff3cd', 
-          border: '1px solid #ffc107', 
-          padding: '1rem', 
+        <div style={{
+          background: '#3d3520',
+          border: '1px solid #ffc107',
+          padding: '1rem',
           borderRadius: '4px',
-          marginBottom: '1rem'
+          marginBottom: '1rem',
+          color: '#ffd54f'
         }}>
-          <h3>⚠️ Folding@Home Not Installed</h3>
-          <p>Please download and install Folding@Home client:</p>
-          <a 
-            href="https://foldingathome.org/start-folding/" 
-            target="_blank" 
+          <h3 style={{ color: '#ffd54f' }}>⚠️ Folding@Home Not Installed</h3>
+          <p style={{ color: '#ffd54f' }}>Please download and install Folding@Home client:</p>
+          <a
+            href="https://foldingathome.org/start-folding/"
+            target="_blank"
             rel="noopener noreferrer"
-            style={{ color: '#0066cc' }}
+            style={{ color: '#64b5f6' }}
           >
             Download Folding@Home
           </a>
         </div>
       )}
 
-      <div style={{ 
-        background: '#f5f5f5', 
-        padding: '1.5rem', 
+      <div style={{
+        background: '#2d2d2d',
+        padding: '1.5rem',
         borderRadius: '8px',
         marginBottom: '2rem'
       }}>
-        <h2>Current Status</h2>
+        <h2 style={{ color: '#e5e5e5' }}>Current Status</h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
           <div>
-            <strong>Status:</strong> 
-            <span style={{ 
+            <strong style={{ color: '#e5e5e5' }}>Status:</strong>
+            <span style={{
               marginLeft: '0.5rem',
               padding: '0.25rem 0.5rem',
               borderRadius: '4px',
@@ -105,21 +106,21 @@ function Compute() {
             </span>
           </div>
           <div>
-            <strong>Work Units:</strong> {status?.workUnits || 0}
+            <strong style={{ color: '#e5e5e5' }}>Work Units:</strong> <span style={{ color: '#e5e5e5' }}>{status?.workUnits || 0}</span>
           </div>
           <div>
-            <strong>FAH Points:</strong> {status?.pointsEarned?.toFixed(0) || 0}
+            <strong style={{ color: '#e5e5e5' }}>FAH Points:</strong> <span style={{ color: '#e5e5e5' }}>{status?.pointsEarned?.toFixed(0) || 0}</span>
           </div>
           <div>
-            <strong>Estimated Rewards:</strong> {estimatedRewards} GWC
+            <strong style={{ color: '#e5e5e5' }}>Estimated Rewards:</strong> <span style={{ color: '#e5e5e5' }}>{estimatedRewards} GWC</span>
           </div>
         </div>
 
         {status?.currentProject && (
-          <div style={{ marginTop: '1rem', padding: '1rem', background: 'white', borderRadius: '4px' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0' }}>Current Project</h3>
-            <div><strong>Project ID:</strong> {status.currentProject}</div>
-            <div>
+          <div style={{ marginTop: '1rem', padding: '1rem', background: '#1a1a1a', borderRadius: '4px' }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: '#e5e5e5' }}>Current Project</h3>
+            <div style={{ color: '#e5e5e5' }}><strong>Project ID:</strong> {status.currentProject}</div>
+            <div style={{ color: '#e5e5e5' }}>
               <strong>Progress:</strong> {status.currentProgress || 0}%
               <div style={{ 
                 width: '100%', 
@@ -142,38 +143,38 @@ function Compute() {
       </div>
 
       {!status?.running && (
-        <div style={{ 
-          background: '#f5f5f5', 
-          padding: '1.5rem', 
+        <div style={{
+          background: '#2d2d2d',
+          padding: '1.5rem',
           borderRadius: '8px',
           marginBottom: '2rem'
         }}>
-          <h2>Configuration</h2>
+          <h2 style={{ color: '#e5e5e5' }}>Configuration</h2>
           <div style={{ display: 'grid', gap: '1rem', marginTop: '1rem' }}>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e5e5e5' }}>
                 <strong>Username:</strong>
               </label>
               <input
                 type="text"
                 value={config.userName}
                 onChange={(e) => setConfig({ ...config, userName: e.target.value })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #555', background: '#1a1a1a', color: '#e5e5e5' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e5e5e5' }}>
                 <strong>Team Number:</strong>
               </label>
               <input
                 type="number"
                 value={config.teamNumber}
                 onChange={(e) => setConfig({ ...config, teamNumber: parseInt(e.target.value) || 0 })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #555', background: '#1a1a1a', color: '#e5e5e5' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e5e5e5' }}>
                 <strong>Passkey (optional):</strong>
               </label>
               <input
@@ -181,17 +182,17 @@ function Compute() {
                 value={config.passkey}
                 onChange={(e) => setConfig({ ...config, passkey: e.target.value })}
                 placeholder="Get from foldingathome.org"
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #555', background: '#1a1a1a', color: '#e5e5e5' }}
               />
             </div>
             <div>
-              <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', color: '#e5e5e5' }}>
                 <strong>Power Level:</strong>
               </label>
               <select
                 value={config.power}
                 onChange={(e) => setConfig({ ...config, power: e.target.value as any })}
-                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
+                style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #555', background: '#1a1a1a', color: '#e5e5e5' }}
               >
                 <option value="light">Light</option>
                 <option value="medium">Medium</option>
@@ -199,7 +200,7 @@ function Compute() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e5e5e5' }}>
                 <input
                   type="checkbox"
                   checked={config.gpuEnabled}
@@ -250,17 +251,17 @@ function Compute() {
         )}
       </div>
 
-      <div style={{ 
-        marginTop: '2rem', 
-        padding: '1rem', 
-        background: '#e3f2fd', 
+      <div style={{
+        marginTop: '2rem',
+        padding: '1rem',
+        background: '#1e3a5f',
         borderRadius: '8px',
         borderLeft: '4px solid #2196f3'
       }}>
-        <h3 style={{ margin: '0 0 0.5rem 0' }}>💡 About Folding@Home</h3>
-        <p style={{ margin: 0 }}>
-          Folding@Home uses your computer's spare processing power to run simulations 
-          that help researchers find cures for diseases like cancer, Alzheimer's, and COVID-19. 
+        <h3 style={{ margin: '0 0 0.5rem 0', color: '#64b5f6' }}>💡 About Folding@Home</h3>
+        <p style={{ margin: 0, color: '#b3d9ff' }}>
+          Folding@Home uses your computer's spare processing power to run simulations
+          that help researchers find cures for diseases like cancer, Alzheimer's, and COVID-19.
           By contributing compute power, you earn GWC tokens: <strong>1 GWC per 1,000 FAH points</strong>.
         </p>
       </div>

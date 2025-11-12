@@ -60,9 +60,11 @@ export class MerkleService {
    * Create a leaf node from claim data
    */
   private static makeLeaf(index: number, account: string, amount: string): Buffer {
+    // Convert amount to wei (BigInt) for proper Solidity encoding
+    const amountWei = ethers.parseEther(amount);
     const hash = ethers.solidityPackedKeccak256(
       ['uint256', 'address', 'uint256'],
-      [index, account, amount]
+      [index, account, amountWei]
     );
     return Buffer.from(hash.slice(2), 'hex');
   }

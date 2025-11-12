@@ -13,6 +13,7 @@ export const GWC_TOKEN_ABI = [
 export const REWARD_ESCROW_ABI = [
   'function claim(uint256 index, address account, uint256 amount, bytes32[] calldata merkleProof)',
   'function isClaimed(uint256 index) view returns (bool)',
+  'function merkleRoots(uint256 epoch) view returns (bytes32)',
 ];
 
 // Contract addresses (update with deployed addresses)
@@ -35,7 +36,7 @@ export const CONTRACTS = {
   // Polygon Amoy testnet (replaces Mumbai)
   80002: {
     GWC_TOKEN: '0x6D938b4C48300A29905FBa272cCdC1207538865f', // ✅ Deployed
-    REWARD_ESCROW: '0x0000000000000000000000000000000000000000', // TODO: Deploy
+    REWARD_ESCROW: '0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86', // ✅ New test escrow #2
   },
 };
 

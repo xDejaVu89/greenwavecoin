@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useWalletStore } from '../store/wallet';
+import { FAHRewardsCard } from '../components/FAHRewardsCard';
 
 function Wallet() {
   const {
@@ -170,6 +171,11 @@ function Wallet() {
       </div>
     </div>
   );
+            {/* Claimable Rewards */}
+            <div style={{ marginTop: '1rem' }}>
+              <FAHRewardsCard />
+            </div>
+
 }
 
 export default Wallet;

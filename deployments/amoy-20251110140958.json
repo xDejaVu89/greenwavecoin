@@ -1,12 +1,15 @@
-﻿{
-  \"network\": \"amoy\",
-  \"chainId\": 80002,
-  \"timestamp\": \"2025-11-10T14:09:58\",
-  \"deployer\": \"0x6D51d80017C66afBeD44D50c775f46C60Bbb56af\",
-  \"contracts\": {
-    \"GreenWaveCoin\": {
-      \"proxy\": \"0x6D938b4C48300A29905FBa272cCdC1207538865f\",
-      \"implementation\": \"0x073fD9101DD307c94b3b649481aAa9Ba3C8CfcF5\"
+{
+  "network": "amoy",
+  "chainId": 80002,
+  "timestamp": "2025-11-11T06:32:56.326Z",
+  "deployer": "0x6D51d80017C66afBeD44D50c775f46C60Bbb56af",
+  "contracts": {
+    "GreenWaveCoin": {
+      "proxy": "0x6D938b4C48300A29905FBa272cCdC1207538865f",
+      "implementation": "0x073fD9101DD307c94b3b649481aAa9Ba3C8CfcF5"
+    },
+    "RewardEscrowV2": {
+      "address": "0x2F3F050Ba9701c18E852011258fe6FF858BC0ED0"
     }
   }
 }
