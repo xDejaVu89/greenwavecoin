@@ -3,6 +3,8 @@ import rewardsRouter from './routes/rewards.routes';
 import { tasksRouter } from './routes/tasks.routes';
 import { resultsRouter } from './routes/results.routes';
 import fahRouter from './routes/fah.routes';
+import aiRouter from './routes/ai.routes';
+import { taskService } from './services/task.service';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -26,9 +28,14 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Health check
-app.get('/health', (req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check — includes queue and network stats
+app.get('/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    network: 'GreenWaveCoin AI Research Network',
+    ...taskService.getStats(),
+  });
 });
 
 // API routes
@@ -36,6 +43,7 @@ app.use('/api/rewards', rewardsRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/results', resultsRouter);
 app.use('/api/fah', fahRouter);
+app.use('/api/ai', aiRouter);
 
 // Error handler
 app.use((err: Error, req: Request, res: Response, next: any) => {
