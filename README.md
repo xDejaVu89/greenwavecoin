@@ -9,6 +9,7 @@
 ## Overview
 
 GreenWaveCoin (GWC) is a comprehensive token ecosystem featuring:
+- **Distributed AI Research**: Earn GWC tokens by testing and optimizing neural network architectures (Neural Architecture Search).
 - **ERC20Votes**: Built-in governance and delegation
 - **UUPS Upgradeable**: Secure upgrade mechanism via timelock
 - **Staking Rewards**: Time-based APR staking system
@@ -305,6 +306,13 @@ Add RPC URLs in `.env` to deploy.
 
 ```
 greenwavecoin/
+├── ai-worker/
+│   ├── worker.py               # Python AI compute worker
+│   └── task_generator.py       # AI evolution engine
+├── backend/
+│   └── src/                    # Task coordinator & anti-cheat
+├── desktop/
+│   └── src/                    # Electron app & AI dashboard
 ├── contracts/
 │   ├── GreenWaveCoin.sol       # Main token contract
 │   ├── GreenWaveStaking.sol    # Staking rewards

@@ -6,13 +6,25 @@ export interface Task {
   assignedAt?: number;
 }
 
+export interface AIMetrics {
+  accuracy: number;
+  final_loss: number;
+  training_time_seconds: number;
+  param_count: number;
+  epochs_completed: number;
+  mode?: string;
+}
+
 export interface TaskResult {
   id: string;
   worker: string;
-  hash: string; // 0x-prefixed hex of blake3 hash
+  hash: string; // 0x-prefixed hex of blake3 or sha256 hash
   signature: string; // 0x-prefixed signature
   receivedAt: number;
   validSignature: boolean;
+  // Extended AI fields (optional, populated by AI workers)
+  metrics?: AIMetrics;
+  config?: Record<string, unknown>;
 }
 
 class TaskService {
@@ -43,6 +55,23 @@ class TaskService {
 
   getResults(): TaskResult[] {
     return this.results.slice();
+  }
+
+  /** Returns the queue length (useful for monitoring) */
+  getQueueLength(): number {
+    return this.queue.length;
+  }
+
+  /** Returns aggregate stats for the /health endpoint */
+  getStats() {
+    const valid = this.results.filter(r => r.validSignature !== false);
+    const uniqueWorkers = new Set(this.results.map(r => r.worker?.toLowerCase()).filter(Boolean));
+    return {
+      queueLength: this.queue.length,
+      totalResults: this.results.length,
+      validResults: valid.length,
+      uniqueWorkers: uniqueWorkers.size,
+    };
   }
 }
 
