@@ -3,18 +3,19 @@
 GreenWaveCoin AI Algorithm Worker
 ==================================
 Distributed AI algorithm research node for the GreenWaveCoin network.
-Replaces the Folding@Home integration with a local Neural Architecture Search (NAS)
-compute task. Each work unit tests a small neural network configuration on a
-benchmark dataset and reports accuracy + training time back to the coordinator.
+Tests neural network configurations on a benchmark dataset and reports
+accuracy + training time back to the coordinator in exchange for GWC tokens.
 
 Usage:
-    python3 worker.py --backend http://localhost:3000 --wallet 0xYourWalletAddress
+    python3 worker.py --backend http://localhost:3000 --wallet 0xYourAddress
 
 Environment variables (override CLI flags):
     BACKEND_BASE_URL    Backend coordinator URL
     WORKER_WALLET       Ethereum wallet address for reward payouts
+    WORKER_API_KEY      API key for authenticating with the backend
     POLL_INTERVAL       Seconds between task polls (default: 30)
     LOG_LEVEL           DEBUG | INFO | WARNING (default: INFO)
+    MAX_RETRIES         Max submission retries before giving up (default: 3)
 """
 
 import argparse
@@ -22,12 +23,15 @@ import hashlib
 import json
 import logging
 import os
+import signal
 import sys
 import time
 import traceback
 from typing import Optional
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # ---------------------------------------------------------------------------
 # Optional: torch import (graceful fallback to numpy-only mode)
@@ -54,6 +58,19 @@ logging.basicConfig(
 )
 log = logging.getLogger("gwc-worker")
 
+# ---------------------------------------------------------------------------
+# Graceful shutdown
+# ---------------------------------------------------------------------------
+_shutdown = False
+
+def _handle_signal(signum, frame):
+    global _shutdown
+    log.info("Shutdown signal received, finishing current task then exiting...")
+    _shutdown = True
+
+signal.signal(signal.SIGTERM, _handle_signal)
+signal.signal(signal.SIGINT, _handle_signal)
+
 
 # ---------------------------------------------------------------------------
 # Benchmark dataset (synthetic, reproducible, no download required)
@@ -67,31 +84,18 @@ def generate_benchmark_dataset(n_samples: int = 1000, n_features: int = 20,
     """
     rng = np.random.RandomState(seed)
     X = rng.randn(n_samples, n_features).astype(np.float32)
-    # Create non-linear class boundaries
     weights = rng.randn(n_features, n_classes).astype(np.float32)
     logits = X @ weights + rng.randn(n_samples, n_classes).astype(np.float32) * 0.5
     y = np.argmax(logits, axis=1).astype(np.int64)
-    # Split 80/20 train/test
     split = int(0.8 * n_samples)
     return (X[:split], y[:split]), (X[split:], y[split:])
 
 
 # ---------------------------------------------------------------------------
-# Neural network builder from task config
+# Neural network builder
 # ---------------------------------------------------------------------------
 
 def build_model(config: dict) -> "nn.Module":
-    """
-    Build a PyTorch model from a JSON config dict.
-    Config schema:
-        {
-          "layers": [64, 32],          # hidden layer sizes
-          "activation": "relu",        # relu | tanh | sigmoid | leaky_relu
-          "dropout": 0.2,              # dropout rate (0 = disabled)
-          "input_size": 20,
-          "output_size": 4
-        }
-    """
     layers_sizes = config.get("layers", [64, 32])
     activation_name = config.get("activation", "relu")
     dropout_rate = float(config.get("dropout", 0.0))
@@ -99,19 +103,19 @@ def build_model(config: dict) -> "nn.Module":
     output_size = int(config.get("output_size", 4))
 
     activation_map = {
-        "relu": nn.ReLU(),
-        "tanh": nn.Tanh(),
-        "sigmoid": nn.Sigmoid(),
-        "leaky_relu": nn.LeakyReLU(0.1),
-        "elu": nn.ELU(),
+        "relu": nn.ReLU,
+        "tanh": nn.Tanh,
+        "sigmoid": nn.Sigmoid,
+        "leaky_relu": lambda: nn.LeakyReLU(0.1),
+        "elu": nn.ELU,
     }
-    activation = activation_map.get(activation_name, nn.ReLU())
+    act_fn = activation_map.get(activation_name, nn.ReLU)
 
     layers = []
     prev_size = input_size
     for size in layers_sizes:
         layers.append(nn.Linear(prev_size, size))
-        layers.append(activation_map.get(activation_name, nn.ReLU()))
+        layers.append(act_fn())
         if dropout_rate > 0:
             layers.append(nn.Dropout(dropout_rate))
         prev_size = size
@@ -121,14 +125,10 @@ def build_model(config: dict) -> "nn.Module":
 
 
 # ---------------------------------------------------------------------------
-# Training loop
+# Training loop (PyTorch)
 # ---------------------------------------------------------------------------
 
 def train_and_evaluate(config: dict) -> dict:
-    """
-    Train a model defined by `config` on the benchmark dataset.
-    Returns a result dict with accuracy, loss, and timing info.
-    """
     if not TORCH_AVAILABLE:
         raise RuntimeError("PyTorch is not installed. Run: pip3 install torch")
 
@@ -137,7 +137,6 @@ def train_and_evaluate(config: dict) -> dict:
     batch_size = int(config.get("batch_size", 64))
     seed = int(config.get("dataset_seed", 42))
 
-    # Reproducible training
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -153,10 +152,9 @@ def train_and_evaluate(config: dict) -> dict:
     criterion = nn.CrossEntropyLoss()
 
     start_time = time.time()
-
-    # Training
-    model.train()
     final_loss = 0.0
+
+    model.train()
     for epoch in range(epochs):
         epoch_loss = 0.0
         for X_batch, y_batch in train_loader:
@@ -171,7 +169,6 @@ def train_and_evaluate(config: dict) -> dict:
 
     elapsed = time.time() - start_time
 
-    # Evaluation
     model.eval()
     correct = 0
     total = 0
@@ -191,18 +188,15 @@ def train_and_evaluate(config: dict) -> dict:
         "training_time_seconds": round(elapsed, 3),
         "param_count": param_count,
         "epochs_completed": epochs,
+        "mode": "pytorch",
     }
 
 
 # ---------------------------------------------------------------------------
-# Numpy-only fallback (no PyTorch) — simple logistic regression
+# Numpy-only fallback
 # ---------------------------------------------------------------------------
 
 def numpy_fallback_evaluate(config: dict) -> dict:
-    """
-    Simple numpy-based evaluation for environments without PyTorch.
-    Uses a basic perceptron / logistic regression as a proxy.
-    """
     seed = int(config.get("dataset_seed", 42))
     (X_train, y_train), (X_test, y_test) = generate_benchmark_dataset(seed=seed)
 
@@ -226,10 +220,10 @@ def numpy_fallback_evaluate(config: dict) -> dict:
     elapsed = time.time() - start
     test_logits = X_test @ W + b
     predicted = np.argmax(test_logits, axis=1)
-    accuracy = (predicted == y_test).mean()
+    accuracy = float((predicted == y_test).mean())
 
     return {
-        "accuracy": round(float(accuracy), 6),
+        "accuracy": round(accuracy, 6),
         "final_loss": -1.0,
         "training_time_seconds": round(elapsed, 3),
         "param_count": int(W.size + b.size),
@@ -239,15 +233,10 @@ def numpy_fallback_evaluate(config: dict) -> dict:
 
 
 # ---------------------------------------------------------------------------
-# Result fingerprinting (anti-cheat proof-of-work)
+# Result fingerprinting (anti-cheat)
 # ---------------------------------------------------------------------------
 
 def compute_result_hash(task_id: str, config: dict, metrics: dict) -> str:
-    """
-    Produce a deterministic SHA-256 fingerprint of the task result.
-    This allows the server to spot-check results by re-running the same task
-    and comparing hashes. The hash binds the task_id to the exact metrics.
-    """
     canonical = json.dumps({
         "task_id": task_id,
         "config": config,
@@ -259,19 +248,36 @@ def compute_result_hash(task_id: str, config: dict, metrics: dict) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Backend API client
+# Backend API client with retry logic
 # ---------------------------------------------------------------------------
 
 class BackendClient:
-    def __init__(self, base_url: str, wallet: str, timeout: int = 30):
+    def __init__(self, base_url: str, wallet: str, api_key: str = "",
+                 timeout: int = 30, max_retries: int = 3):
         self.base_url = base_url.rstrip("/")
         self.wallet = wallet
         self.timeout = timeout
+        self.max_retries = max_retries
+
+        # Configure session with automatic retry on transient network errors
         self.session = requests.Session()
-        self.session.headers.update({
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1.0,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["GET", "POST"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("http://", adapter)
+        self.session.mount("https://", adapter)
+
+        headers = {
             "Content-Type": "application/json",
-            "User-Agent": "GreenWaveCoin-AI-Worker/1.0",
-        })
+            "User-Agent": "GreenWaveCoin-AI-Worker/1.1",
+        }
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        self.session.headers.update(headers)
 
     def health_check(self) -> bool:
         try:
@@ -284,14 +290,21 @@ class BackendClient:
         try:
             r = self.session.get(
                 f"{self.base_url}/api/tasks",
-                params={"worker": self.wallet},
                 timeout=self.timeout,
             )
             if r.status_code == 204:
-                return None  # No tasks available
+                return None
+            if r.status_code == 401:
+                log.error("Authentication failed — check WORKER_API_KEY")
+                return None
             r.raise_for_status()
-            data = r.json()
-            return data.get("task")
+            return r.json().get("task")
+        except requests.exceptions.ConnectionError:
+            log.warning("Connection error fetching task")
+            return None
+        except requests.exceptions.Timeout:
+            log.warning("Timeout fetching task")
+            return None
         except requests.exceptions.RequestException as e:
             log.warning(f"Failed to fetch task: {e}")
             return None
@@ -304,56 +317,82 @@ class BackendClient:
             "hash": result_hash,
             "metrics": metrics,
             "config": config,
-            # signature field kept for compatibility with existing results route
             "signature": "0x" + "0" * 130,  # placeholder; server verifies hash
         }
-        try:
-            r = self.session.post(
-                f"{self.base_url}/api/results",
-                json=payload,
-                timeout=self.timeout,
-            )
-            r.raise_for_status()
-            resp = r.json()
-            log.info(f"Result submitted — accepted={resp.get('accepted')}, "
-                     f"valid={resp.get('validSignature')}, "
-                     f"accuracy={metrics['accuracy']:.4f}, "
-                     f"time={metrics['training_time_seconds']:.1f}s")
-            return True
-        except requests.exceptions.RequestException as e:
-            log.error(f"Failed to submit result: {e}")
-            return False
+
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                r = self.session.post(
+                    f"{self.base_url}/api/results",
+                    json=payload,
+                    timeout=self.timeout,
+                )
+                if r.status_code == 401:
+                    log.error("Authentication failed submitting result — check WORKER_API_KEY")
+                    return False
+                r.raise_for_status()
+                resp = r.json()
+                log.info(
+                    f"Result submitted — accepted={resp.get('accepted')}, "
+                    f"valid={resp.get('validSignature')}, "
+                    f"accuracy={metrics['accuracy']:.4f}, "
+                    f"time={metrics['training_time_seconds']:.1f}s"
+                )
+                return True
+            except requests.exceptions.RequestException as e:
+                wait = 2 ** attempt
+                log.warning(f"Submit attempt {attempt}/{self.max_retries} failed: {e}. "
+                            f"Retrying in {wait}s...")
+                time.sleep(wait)
+
+        log.error(f"Failed to submit result for task {task_id} after {self.max_retries} attempts")
+        return False
 
 
 # ---------------------------------------------------------------------------
 # Main worker loop
 # ---------------------------------------------------------------------------
 
-def run_worker(backend_url: str, wallet: str, poll_interval: int):
-    client = BackendClient(backend_url, wallet)
+def run_worker(backend_url: str, wallet: str, api_key: str,
+               poll_interval: int, max_retries: int):
+    global _shutdown
 
-    log.info(f"GreenWaveCoin AI Worker starting")
-    log.info(f"Backend: {backend_url}")
-    log.info(f"Wallet:  {wallet}")
-    log.info(f"PyTorch: {'available' if TORCH_AVAILABLE else 'NOT available (numpy fallback)'}")
-    log.info(f"Poll interval: {poll_interval}s")
+    client = BackendClient(backend_url, wallet, api_key=api_key, max_retries=max_retries)
 
-    # Wait for backend to be reachable
+    log.info("=" * 60)
+    log.info("GreenWaveCoin AI Worker v1.1")
+    log.info(f"  Backend  : {backend_url}")
+    log.info(f"  Wallet   : {wallet}")
+    log.info(f"  Auth     : {'enabled' if api_key else 'disabled'}")
+    log.info(f"  PyTorch  : {'available' if TORCH_AVAILABLE else 'NOT available (numpy fallback)'}")
+    log.info(f"  Poll     : every {poll_interval}s")
+    log.info("=" * 60)
+
+    # Wait for backend with exponential backoff
+    backoff = 5
     while not client.health_check():
-        log.warning("Backend not reachable, retrying in 10s...")
-        time.sleep(10)
+        if _shutdown:
+            sys.exit(0)
+        log.warning(f"Backend not reachable, retrying in {backoff}s...")
+        time.sleep(backoff)
+        backoff = min(backoff * 2, 60)
     log.info("Backend connection established.")
 
-    while True:
+    tasks_completed = 0
+    tasks_failed = 0
+
+    while not _shutdown:
         try:
             task = client.fetch_task()
+
             if task is None:
-                log.info("No tasks available, waiting...")
+                log.info(f"No tasks available. Completed: {tasks_completed}, Failed: {tasks_failed}")
                 time.sleep(poll_interval)
                 continue
 
             task_id = task["id"]
             raw_payload = task.get("payload", "{}")
+
             try:
                 config = json.loads(raw_payload) if isinstance(raw_payload, str) else raw_payload
             except json.JSONDecodeError:
@@ -361,22 +400,34 @@ def run_worker(backend_url: str, wallet: str, poll_interval: int):
                 time.sleep(5)
                 continue
 
-            log.info(f"Processing task {task_id} — config: {json.dumps(config)}")
+            log.info(f"Task {task_id[:8]}... — layers={config.get('layers')}, "
+                     f"act={config.get('activation')}, lr={config.get('learning_rate')}, "
+                     f"epochs={config.get('epochs')}")
 
-            if TORCH_AVAILABLE:
-                metrics = train_and_evaluate(config)
+            try:
+                if TORCH_AVAILABLE:
+                    metrics = train_and_evaluate(config)
+                else:
+                    metrics = numpy_fallback_evaluate(config)
+            except Exception as e:
+                log.error(f"Training failed for task {task_id}: {e}")
+                log.debug(traceback.format_exc())
+                tasks_failed += 1
+                time.sleep(5)
+                continue
+
+            success = client.submit_result(task_id, config, metrics)
+            if success:
+                tasks_completed += 1
             else:
-                metrics = numpy_fallback_evaluate(config)
+                tasks_failed += 1
 
-            client.submit_result(task_id, config, metrics)
-
-        except KeyboardInterrupt:
-            log.info("Worker stopped by user.")
-            sys.exit(0)
         except Exception as e:
-            log.error(f"Unexpected error: {e}")
+            log.error(f"Unexpected error in worker loop: {e}")
             log.debug(traceback.format_exc())
             time.sleep(poll_interval)
+
+    log.info(f"Worker shut down cleanly. Completed: {tasks_completed}, Failed: {tasks_failed}")
 
 
 # ---------------------------------------------------------------------------
@@ -384,9 +435,7 @@ def run_worker(backend_url: str, wallet: str, poll_interval: int):
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="GreenWaveCoin AI Algorithm Worker"
-    )
+    parser = argparse.ArgumentParser(description="GreenWaveCoin AI Algorithm Worker")
     parser.add_argument(
         "--backend",
         default=os.environ.get("BACKEND_BASE_URL", "http://localhost:3000"),
@@ -395,8 +444,12 @@ def main():
     parser.add_argument(
         "--wallet",
         default=os.environ.get("WORKER_WALLET", ""),
-        required=not os.environ.get("WORKER_WALLET"),
         help="Ethereum wallet address for reward payouts",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=os.environ.get("WORKER_API_KEY", ""),
+        help="Worker API key for backend authentication",
     )
     parser.add_argument(
         "--poll-interval",
@@ -404,13 +457,29 @@ def main():
         default=int(os.environ.get("POLL_INTERVAL", "30")),
         help="Seconds between task polls when queue is empty",
     )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=int(os.environ.get("MAX_RETRIES", "3")),
+        help="Max result submission retries before giving up",
+    )
     args = parser.parse_args()
+
+    if not args.wallet:
+        log.error("Wallet address is required. Use --wallet or set WORKER_WALLET env var.")
+        sys.exit(1)
 
     if not args.wallet.startswith("0x") or len(args.wallet) != 42:
         log.error("Invalid wallet address. Must be a 42-character 0x-prefixed Ethereum address.")
         sys.exit(1)
 
-    run_worker(args.backend, args.wallet, args.poll_interval)
+    run_worker(
+        backend_url=args.backend,
+        wallet=args.wallet,
+        api_key=args.api_key,
+        poll_interval=args.poll_interval,
+        max_retries=args.max_retries,
+    )
 
 
 if __name__ == "__main__":

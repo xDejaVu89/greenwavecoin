@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { createHash } from 'crypto';
 import { taskService, AIMetrics } from '../services/task.service';
+import { requireAdminKey, requireWorkerKey } from '../middleware/auth';
+import { validateSubmitResult } from '../middleware/validate';
 
 export const resultsRouter = Router();
 
@@ -16,22 +18,14 @@ function verifyAIHash(
   submittedHash: string
 ): boolean {
   try {
-    const canonical = JSON.stringify(
-      {
-        task_id: taskId,
-        config,
-        accuracy: metrics.accuracy,
-        final_loss: metrics.final_loss,
-        param_count: metrics.param_count,
-      },
-      Object.keys({
-        task_id: taskId,
-        config,
-        accuracy: metrics.accuracy,
-        final_loss: metrics.final_loss,
-        param_count: metrics.param_count,
-      }).sort()
-    );
+    const obj = {
+      task_id: taskId,
+      config,
+      accuracy: metrics.accuracy,
+      final_loss: metrics.final_loss,
+      param_count: metrics.param_count,
+    };
+    const canonical = JSON.stringify(obj, Object.keys(obj).sort());
     const expected = '0x' + createHash('sha256').update(canonical).digest('hex');
     return expected.toLowerCase() === submittedHash.toLowerCase();
   } catch {
@@ -41,20 +35,13 @@ function verifyAIHash(
 
 /**
  * POST /api/results
- * Worker submits a completed task result.
+ * Worker: submit a completed task result.
  *
- * Body (AI worker format):
- *   { id, worker, hash, signature, metrics, config }
- *
- * Body (legacy Rust worker format):
- *   { id, worker, hash, signature }
+ * Body (AI worker):   { id, worker, hash, signature, metrics, config }
+ * Body (legacy Rust): { id, worker, hash, signature }
  */
-resultsRouter.post('/', (req, res) => {
-  const { id, worker, hash, signature, metrics, config } = req.body || {};
-
-  if (!id || !worker || !hash || !signature) {
-    return res.status(400).json({ error: 'id, worker, hash, signature required' });
-  }
+resultsRouter.post('/', requireWorkerKey, validateSubmitResult, (req, res) => {
+  const { id, worker, hash, signature, metrics, config } = req.body;
 
   const task = taskService.getTask(id);
   if (!task) return res.status(404).json({ error: 'task not found' });
@@ -92,8 +79,8 @@ resultsRouter.post('/', (req, res) => {
 
 /**
  * GET /api/results
- * Admin/debug: list all submitted results.
+ * Admin-only: list all submitted results.
  */
-resultsRouter.get('/', (_req, res) => {
+resultsRouter.get('/', requireAdminKey, (_req, res) => {
   res.json({ results: taskService.getResults() });
 });
