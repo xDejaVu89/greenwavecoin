@@ -82,6 +82,39 @@ router.get('/chain-status', requireAdminKey, async (_req: Request, res: Response
 });
 
 /**
+ * GET /api/rewards/proof?wallet=0x...
+ * Returns the best available claim proof for a wallet — formatted for the /claim page.
+ * Finds the most recent published epoch with an unclaimed reward for this wallet.
+ */
+router.get('/proof', (req: Request, res: Response) => {
+  const wallet = (req.query.wallet as string || '').toLowerCase();
+  if (!wallet || !wallet.startsWith('0x')) {
+    return res.status(400).json({ error: 'wallet query parameter is required (0x...)' });
+  }
+  try {
+    const claims = getClaimsForWallet(wallet);
+    // Find the most recent published, unclaimed epoch
+    const pending = claims
+      .filter(c => !c.claimed && c.epochStatus === 'published')
+      .sort((a, b) => b.epoch - a.epoch);
+    if (pending.length === 0) {
+      return res.status(404).json({ error: 'No pending rewards found for this wallet' });
+    }
+    const best = pending[0];
+    return res.json({
+      epochId: best.epoch,
+      index: best.index,
+      cumulativeAmount: best.amountWei,
+      amountGwc: best.amountGwc,
+      proof: best.proof,
+      escrowAddress: process.env.ESCROW_ADDRESS || null,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+/**
  * GET /api/rewards/:wallet
  * Returns all pending and published reward claims for a wallet address,
  * including the Merkle proof needed to claim on-chain.

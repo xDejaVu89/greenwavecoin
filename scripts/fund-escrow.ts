@@ -5,18 +5,15 @@ import * as path from "path";
 async function main() {
   console.log("🚀 Funding RewardEscrow with GWC tokens...\n");
 
-  // Load deployment info
-  const deploymentsPath = path.join(__dirname, "..", "deployments");
-  const deploymentFile = fs.readdirSync(deploymentsPath)
-    .filter(f => f.startsWith("amoy-"))
-    .sort()
-    .reverse()[0]; // Get latest
-  
-  const deploymentPath = path.join(deploymentsPath, deploymentFile);
+  // Load Polygon Mainnet deployment info
+  const deploymentPath = path.join(__dirname, "..", "deployments", "polygon-mainnet.json");
   const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf-8"));
 
-  const gwcAddress = deployment.contracts.GreenWaveCoin.proxy;
-  const escrowAddress = deployment.contracts.RewardEscrowV2.address;
+  const gwcAddress = deployment.token;
+  const escrowAddress = deployment.rewardEscrow;
+  if (!escrowAddress) {
+    throw new Error("rewardEscrow not found in polygon-mainnet.json. Run deploy-escrow.ts first.");
+  }
 
   console.log("📝 Contract Addresses:");
   console.log(`   GWC Token: ${gwcAddress}`);
@@ -33,8 +30,8 @@ async function main() {
   const balance = await gwc.balanceOf(deployer.address);
   console.log(`   Balance: ${ethers.formatEther(balance)} GWC\n`);
 
-  // Transfer amount (100,000 GWC for rewards pool)
-  const transferAmount = ethers.parseEther("100000");
+  // Transfer amount (5,000,000 GWC for compute rewards pool — ~2 years of rewards)
+  const transferAmount = ethers.parseEther("5000000");
   
   console.log(`📤 Transferring ${ethers.formatEther(transferAmount)} GWC to escrow...`);
   

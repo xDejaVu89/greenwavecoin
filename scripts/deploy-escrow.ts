@@ -8,10 +8,8 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
 
-  const deploymentFile = path.join(__dirname, "../deployments/amoy-20251110140958.json");
-  const deployment = JSON.parse(fs.readFileSync(deploymentFile, "utf-8"));
-  const gwcTokenAddress = deployment.contracts.GreenWaveCoin.proxy;
-
+  // Polygon Mainnet GWC token address
+  const gwcTokenAddress = "0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9";
   console.log("Using GWC Token at:", gwcTokenAddress);
 
   console.log("Deploying RewardEscrowV2 (non-upgradeable)...");
@@ -23,14 +21,21 @@ async function main() {
 
   console.log(" RewardEscrowV2 deployed at:", escrowAddress);
 
-  deployment.contracts.RewardEscrowV2 = {
-    address: escrowAddress
-  };
-  deployment.timestamp = new Date().toISOString();
+  // Save to mainnet deployment file
+  const mainnetFile = path.join(__dirname, "../deployments/polygon-mainnet.json");
+  let mainnetDeployment: any = {};
+  if (fs.existsSync(mainnetFile)) {
+    mainnetDeployment = JSON.parse(fs.readFileSync(mainnetFile, "utf-8"));
+  }
+  mainnetDeployment.rewardEscrow = escrowAddress;
+  mainnetDeployment.rewardEscrowDeployedAt = new Date().toISOString();
+  fs.writeFileSync(mainnetFile, JSON.stringify(mainnetDeployment, null, 2));
+  console.log(" Deployment info saved to deployments/polygon-mainnet.json");
 
-  fs.writeFileSync(deploymentFile, JSON.stringify(deployment, null, 2));
-  console.log(" Deployment info updated");
-  console.log(`\nFund escrow with GWC tokens: ${escrowAddress}`);
+  console.log("\n📋 Next steps:");
+  console.log("1. Add to coordinator .env:  ESCROW_ADDRESS=" + escrowAddress);
+  console.log("2. Fund escrow: PRIVATE_KEY='...' npx hardhat run scripts/fund-escrow.ts --network polygon");
+  console.log("3. Verify: npx hardhat verify --network polygon " + escrowAddress + " " + gwcTokenAddress);
 }
 
 main()

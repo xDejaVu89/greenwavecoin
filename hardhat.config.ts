@@ -74,7 +74,7 @@ const config: HardhatUserConfig = {
     // Polygon ecosystem
     amoy: createNetworkConfig("https://rpc-amoy.polygon.technology"),
     mumbai: createNetworkConfig("https://rpc-mumbai.maticvigil.com"),
-    polygon: createNetworkConfig("https://polygon-rpc.com"),
+    polygon: { ...createNetworkConfig(process.env.POLYGON_RPC || "https://1rpc.io/matic"), gasPrice: 350_000_000_000 },
 
     // BSC ecosystem
     bsc: createNetworkConfig(BSC_RPC),
@@ -128,5 +128,15 @@ export default config;
     arbitrumGoerli: ARBISCAN_API_KEY || "",
     base: BASESCAN_API_KEY || "",
     baseGoerli: BASESCAN_API_KEY || ""
-  }
+  },
+  customChains: [
+    {
+      network: "polygon",
+      chainId: 137,
+      urls: {
+        apiURL: "https://api.polygonscan.com/api",
+        browserURL: "https://polygonscan.com"
+      }
+    }
+  ]
 };

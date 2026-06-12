@@ -28,8 +28,27 @@ from typing import Optional
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-import numpy as np
-
+# ---------------------------------------------------------------------------
+# Optional numpy import
+# ---------------------------------------------------------------------------
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    # Minimal numpy stub for pure-Python fallback
+    class _NpStub:
+        """Minimal numpy stub so the app runs without numpy installed."""
+        def array(self, x): return list(x)
+        def zeros(self, *a, **k): return [[0.0]]
+        def random(self): return self
+        def randn(self, *a): return [[0.0]]
+        def float32(self): return float
+        def concatenate(self, arrays, axis=0): return sum(arrays, [])
+        def mean(self, x): return sum(x) / len(x) if x else 0.0
+        def std(self, x): return 0.0
+        def dot(self, a, b): return 0.0
+    np = _NpStub()
 # ---------------------------------------------------------------------------
 # Optional torch import
 # ---------------------------------------------------------------------------

@@ -1,0 +1,100 @@
+name: Build GreenWaveCoin Worker
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller requests numpy
+          # Note: torch is optional — worker falls back to numpy if not present
+          # Uncomment below to include torch (makes .exe ~1.5 GB):
+          # pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+      - name: Build Windows .exe
+        working-directory: ai-worker
+        run: |
+          pyinstaller gwc_worker.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreenWaveCoin-Worker-Windows
+          path: ai-worker/dist/GreenWaveCoin-Worker.exe
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ai-worker/dist/GreenWaveCoin-Worker.exe
+          body: |
+            ## GreenWaveCoin Worker ${{ github.ref_name }}
+
+            ### Windows Download
+            Download `GreenWaveCoin-Worker.exe` below — no Python installation required.
+
+            ### How to use
+            1. Download `GreenWaveCoin-Worker.exe`
+            2. Double-click to run
+            3. Enter your Ethereum wallet address
+            4. Click **Start Worker**
+
+            Your PC will begin running AI experiments and earning GWC tokens automatically.
+
+            ### System Requirements
+            - Windows 10 or later (64-bit)
+            - 2 GB RAM minimum
+            - Internet connection
+
+            ### Compute Mode
+            This build uses **NumPy** for fast CPU computation without requiring PyTorch.
+            For GPU acceleration, clone the repo and install PyTorch manually.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller requests numpy
+
+      - name: Build macOS app
+        working-directory: ai-worker
+        run: |
+          pyinstaller gwc_worker.spec
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GreenWaveCoin-Worker-macOS
+          path: ai-worker/dist/GreenWaveCoin-Worker
+
+      - name: Add macOS binary to release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ai-worker/dist/GreenWaveCoin-Worker
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
