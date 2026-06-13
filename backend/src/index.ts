@@ -22,6 +22,9 @@ const PORT = process.env.PORT || 3000;
 // Security middleware
 // ---------------------------------------------------------------------------
 
+// Trust nginx reverse proxy (needed for rate limiting behind nginx)
+app.set('trust proxy', 1);
+
 app.use(helmet());
 
 // CORS — restrict to allowed origins in production

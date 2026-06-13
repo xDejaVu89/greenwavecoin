@@ -15,6 +15,11 @@
 import { Request, Response, NextFunction } from 'express';
 
 function extractBearer(req: Request): string | null {
+  // Accept both 'X-API-Key: <key>' (worker client) and 'Authorization: Bearer <key>'
+  const xApiKey = req.headers['x-api-key'];
+  if (xApiKey && typeof xApiKey === 'string') {
+    return xApiKey.trim();
+  }
   const header = req.headers['authorization'] || '';
   if (header.startsWith('Bearer ')) {
     return header.slice(7).trim();

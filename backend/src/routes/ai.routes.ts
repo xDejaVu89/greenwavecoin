@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { taskService } from '../services/task.service';
+import { createHash } from 'crypto';
+import { requireWorkerKey } from '../middleware/auth';
+import { taskService, AIMetrics } from '../services/task.service';
 
 const router = Router();
 
@@ -172,6 +174,62 @@ router.post('/verify-result', (req: Request, res: Response) => {
     expectedHash,
     submittedHash,
   });
+});
+
+/**
+ * POST /api/ai/tasks/fetch
+ * Worker compatibility endpoint — maps to the internal task queue.
+ * Body: { wallet: string }
+ * Returns: { task } or 204 if queue is empty.
+ */
+router.post('/tasks/fetch', requireWorkerKey, (req: Request, res: Response) => {
+  const task = taskService.getNextTask();
+  if (!task) return res.status(204).send();
+  res.json({ task });
+});
+
+/**
+ * POST /api/ai/tasks/submit
+ * Worker compatibility endpoint — maps to the results store.
+ * Body: { taskId, wallet, metrics, resultHash }
+ */
+router.post('/tasks/submit', requireWorkerKey, (req: Request, res: Response) => {
+  const { taskId, wallet, metrics, resultHash } = req.body || {};
+  if (!taskId || !wallet || !metrics) {
+    return res.status(400).json({ error: 'taskId, wallet, and metrics are required' });
+  }
+  const task = taskService.getTask(taskId);
+  if (!task) return res.status(404).json({ error: 'task not found' });
+
+  // Parse config from the stored task payload
+  let config: Record<string, unknown> = {};
+  try { config = JSON.parse(task.payload); } catch (_) {}
+
+  // Verify the simplified hash the GUI worker sends:
+  // SHA-256 of "taskId:configJSON:accuracy.4f"
+  let validSignature = false;
+  try {
+    const payloadStr = JSON.stringify(config, Object.keys(config).sort());
+    const expected = createHash('sha256')
+      .update(`${taskId}:${payloadStr}:${(metrics.accuracy as number).toFixed(4)}`)
+      .digest('hex');
+    validSignature = (resultHash || '').toLowerCase() === expected.toLowerCase();
+  } catch (_) {
+    validSignature = false;
+  }
+
+  taskService.addResult({
+    id: taskId,
+    worker: wallet,
+    hash: resultHash || '',
+    signature: '',
+    receivedAt: Date.now(),
+    validSignature,
+    metrics: metrics as AIMetrics,
+    config,
+  });
+
+  res.json({ accepted: true, validSignature });
 });
 
 export default router;

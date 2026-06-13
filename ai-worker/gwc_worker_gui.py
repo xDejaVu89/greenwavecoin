@@ -64,7 +64,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-BACKEND_URL = "https://206.81.5.13.nip.io"
+BACKEND_URL = "http://167.99.233.130"
 WORKER_API_KEY = "gwc-worker-2025"
 APP_VERSION = "1.0.0"
 POLL_INTERVAL = 30
