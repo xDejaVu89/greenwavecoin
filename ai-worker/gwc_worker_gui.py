@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GreenWaveCoin AI Worker — Enhanced Desktop GUI v1.0.3
+GreenWaveCoin AI Worker — Enhanced Desktop GUI v1.0.4
 =======================================================
 A polished, engaging Windows/Mac/Linux desktop app for running the
 GreenWaveCoin distributed AI research worker.
@@ -73,10 +73,12 @@ except ImportError:
 # ---------------------------------------------------------------------------
 BACKEND_URL    = "https://api.greenwavecoin.com"
 WORKER_API_KEY = "gwc-worker-2025"
-APP_VERSION    = "1.0.3"
+APP_VERSION    = "1.0.4"
 POLL_INTERVAL  = 30
 MAX_RETRIES    = 3
 GWC_PER_TASK   = 0.5   # estimated GWC reward per completed task
+GITHUB_RELEASE_URL = "https://api.github.com/repos/xDejaVu89/greenwavecoin/releases/latest"
+DOWNLOAD_PAGE     = "https://greenwavecoin.com"
 
 # Colour palette
 C_BG       = "#0a0f1e"
@@ -467,6 +469,8 @@ class GWCWorkerApp:
         self._build_ui()
         self._poll_log_queue()
         self._tick_uptime()
+        # Check for updates 3 seconds after startup (non-blocking)
+        self.root.after(3000, self._check_for_update)
 
     # -----------------------------------------------------------------------
     # UI construction
@@ -742,6 +746,47 @@ class GWCWorkerApp:
                 rate = self._tasks_completed / (elapsed / 3600)
                 self._stat_rate.configure(text=f"{rate:.1f}")
         self.root.after(1000, self._tick_uptime)
+
+    # -----------------------------------------------------------------------
+    # Auto-update check
+    # -----------------------------------------------------------------------
+
+    def _check_for_update(self):
+        """Check GitHub for a newer release and prompt the user if one exists."""
+        def _do_check():
+            try:
+                resp = requests.get(GITHUB_RELEASE_URL, timeout=8)
+                if resp.status_code != 200:
+                    return
+                data = resp.json()
+                latest_tag = data.get("tag_name", "").lstrip("v")
+                if not latest_tag:
+                    return
+                # Simple version comparison (major.minor.patch)
+                def _ver(s):
+                    try:
+                        return tuple(int(x) for x in s.split("."))
+                    except Exception:
+                        return (0, 0, 0)
+                if _ver(latest_tag) > _ver(APP_VERSION):
+                    self.root.after(0, lambda: self._show_update_dialog(latest_tag))
+            except Exception:
+                pass  # Silently ignore — update check is non-critical
+        threading.Thread(target=_do_check, daemon=True).start()
+
+    def _show_update_dialog(self, latest_version: str):
+        """Show a non-blocking dialog prompting the user to update."""
+        import webbrowser
+        answer = messagebox.askyesno(
+            "Update Available",
+            f"A new version of the GreenWaveCoin Worker is available!\n\n"
+            f"  Current version:  v{APP_VERSION}\n"
+            f"  Latest version:   v{latest_version}\n\n"
+            f"Download the latest version now?",
+            icon="info",
+        )
+        if answer:
+            webbrowser.open(DOWNLOAD_PAGE)
 
     # -----------------------------------------------------------------------
     # Network ping
