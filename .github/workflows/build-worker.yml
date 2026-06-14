@@ -28,7 +28,7 @@ jobs:
       - name: Build Windows .exe
         working-directory: ai-worker
         run: |
-          pyinstaller gwc_worker.spec
+          pyinstaller GreenWaveCoin-Worker.spec
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -55,6 +55,10 @@ jobs:
 
             Your PC will begin running AI experiments and earning GWC tokens automatically.
 
+            ### What's new in ${{ github.ref_name }}
+            - Fixed hash verification — task completions now correctly validated by the coordinator
+            - Improved result submission reliability
+
             ### System Requirements
             - Windows 10 or later (64-bit)
             - 2 GB RAM minimum
@@ -80,10 +84,10 @@ jobs:
         run: |
           pip install pyinstaller requests numpy
 
-      - name: Build macOS app
+      - name: Build macOS binary
         working-directory: ai-worker
         run: |
-          pyinstaller gwc_worker.spec
+          pyinstaller GreenWaveCoin-Worker.spec
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

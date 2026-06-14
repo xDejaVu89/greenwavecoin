@@ -237,13 +237,16 @@ def numpy_fallback_evaluate(config: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 def compute_result_hash(task_id: str, config: dict, metrics: dict) -> str:
+    # Use compact separators (no spaces) to match JavaScript JSON.stringify output.
+    # JS: JSON.stringify(obj, keys) produces {"key":value} without spaces.
+    # Python default json.dumps produces {"key": value} WITH spaces — causing hash mismatch.
     canonical = json.dumps({
         "task_id": task_id,
         "config": config,
         "accuracy": metrics["accuracy"],
         "final_loss": metrics["final_loss"],
         "param_count": metrics["param_count"],
-    }, sort_keys=True)
+    }, sort_keys=True, separators=(',', ':'))
     return "0x" + hashlib.sha256(canonical.encode()).hexdigest()
 
 

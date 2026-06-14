@@ -242,7 +242,10 @@ class BackendClient:
             return None
 
     def submit_result(self, task_id, config, metrics):
-        payload_str = json.dumps(config, sort_keys=True)
+        # Use compact separators (no spaces) to match JavaScript JSON.stringify output.
+        # JS: JSON.stringify(obj, keys) produces {"key":value} without spaces.
+        # Python default json.dumps produces {"key": value} WITH spaces — causing hash mismatch.
+        payload_str = json.dumps(config, sort_keys=True, separators=(',', ':'))
         result_hash = hashlib.sha256(
             f"{task_id}:{payload_str}:{metrics['accuracy']:.4f}".encode()
         ).hexdigest()
