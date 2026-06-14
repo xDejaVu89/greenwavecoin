@@ -73,7 +73,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 BACKEND_URL    = "https://api.greenwavecoin.com"
 WORKER_API_KEY = "gwc-worker-2025"
-APP_VERSION    = "1.0.4"
+APP_VERSION    = "1.0.5"
 POLL_INTERVAL  = 30
 MAX_RETRIES    = 3
 GWC_PER_TASK   = 0.5   # estimated GWC reward per completed task
@@ -654,6 +654,8 @@ class GWCWorkerApp:
         self._stat_rate      = self._stat_card(sg, "Tasks / hr",    "—",      C_ACCENT2, 1, 1)
         self._stat_uptime    = self._stat_card(sg, "Uptime",        "00:00",  C_MUTED,   2, 0)
         self._stat_success   = self._stat_card(sg, "Success Rate",  "—",      C_SUCCESS, 2, 1)
+        self._stat_network   = self._stat_card(sg, "Network Total", "—",      C_ACCENT2, 3, 0)
+        self._stat_workers   = self._stat_card(sg, "Active Workers","—",      C_MUTED,   3, 1)
 
         # ── Accuracy chart ────────────────────────────────────────────────────
         chart_panel = self._panel(right_col, "Accuracy History")
@@ -670,6 +672,8 @@ class GWCWorkerApp:
 
         # Start network ping loop
         self._ping_network()
+        # Start network stats poll
+        self._poll_network_stats()
 
     # -----------------------------------------------------------------------
     # Helper builders
@@ -807,6 +811,24 @@ class GWCWorkerApp:
             self.root.after(0, lambda: self._update_net_badge(ok, ms))
         threading.Thread(target=_do_ping, daemon=True).start()
         self.root.after(15000, self._ping_network)
+
+    def _poll_network_stats(self):
+        """Fetch global network stats from coordinator every 60 seconds."""
+        def _do_fetch():
+            try:
+                r = requests.get(f"{BACKEND_URL}/api/ai/stats", timeout=8)
+                if r.status_code == 200:
+                    data = r.json()
+                    total = data.get("totalTasksCompleted", data.get("totalResults", 0))
+                    workers = data.get("uniqueWorkers", 0)
+                    self.root.after(0, lambda: self._stat_network.configure(
+                        text=f"{total:,}"))
+                    self.root.after(0, lambda: self._stat_workers.configure(
+                        text=str(workers)))
+            except Exception:
+                pass  # Silently ignore — non-critical
+        threading.Thread(target=_do_fetch, daemon=True).start()
+        self.root.after(60_000, self._poll_network_stats)
 
     def _update_net_badge(self, ok: bool, ms: int):
         if ok:
