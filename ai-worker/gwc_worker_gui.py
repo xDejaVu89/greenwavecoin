@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-GreenWaveCoin AI Worker — Enhanced Desktop GUI v1.0.4
-=======================================================
+GreenWaveCoin AI Worker — Desktop GUI v1.0.6
+=============================================
 A polished, engaging Windows/Mac/Linux desktop app for running the
 GreenWaveCoin distributed AI research worker.
 
@@ -13,6 +13,10 @@ Features:
 - Current task architecture display
 - Network latency monitor
 - Color-coded activity feed
+- Wallet address persistence (saved between sessions)
+- System tray support (minimize to tray, keep running in background)
+- Improved hash computation matching coordinator
+- Better no-tasks UX with queue status
 
 Packaged with PyInstaller into a single .exe for Windows users.
 """
@@ -69,16 +73,29 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
+# Optional pystray import (system tray support)
+# ---------------------------------------------------------------------------
+try:
+    import pystray
+    from PIL import Image as PILImage
+    TRAY_AVAILABLE = True
+except ImportError:
+    TRAY_AVAILABLE = False
+
+# ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 BACKEND_URL    = "https://api.greenwavecoin.com"
 WORKER_API_KEY = "gwc-worker-2025"
-APP_VERSION    = "1.0.5"
+APP_VERSION    = "1.0.6"
 POLL_INTERVAL  = 30
 MAX_RETRIES    = 3
 GWC_PER_TASK   = 0.5   # estimated GWC reward per completed task
 GITHUB_RELEASE_URL = "https://api.github.com/repos/xDejaVu89/greenwavecoin/releases/latest"
 DOWNLOAD_PAGE     = "https://greenwavecoin.com"
+
+# Config file for persisting wallet address
+CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".gwc_worker_config.json")
 
 # Colour palette
 C_BG       = "#0a0f1e"
@@ -92,6 +109,32 @@ C_SUCCESS  = "#10b981"
 C_WARN     = "#f59e0b"
 C_ERROR    = "#ef4444"
 C_GOLD     = "#fbbf24"
+
+# ---------------------------------------------------------------------------
+# Config persistence
+# ---------------------------------------------------------------------------
+
+def load_config() -> dict:
+    """Load saved config (wallet address, etc.) from disk."""
+    try:
+        if os.path.exists(CONFIG_FILE):
+            with open(CONFIG_FILE, "r") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def save_config(data: dict):
+    """Save config to disk."""
+    try:
+        existing = load_config()
+        existing.update(data)
+        with open(CONFIG_FILE, "w") as f:
+            json.dump(existing, f, indent=2)
+    except Exception:
+        pass
+
 
 # ---------------------------------------------------------------------------
 # Training logic
@@ -120,24 +163,33 @@ def numpy_fallback_evaluate(config: dict, progress_cb=None) -> dict:
         "training_time_seconds": round(0.4 * epochs, 2),
         "epochs_completed": epochs,
         "final_loss": round(0.5 - accuracy * 0.3, 4),
+        "param_count": sum(layers) if layers else 0,
         "torch_available": False,
+        "mode": "numpy_fallback",
     }
 
 
 def train_and_evaluate(config: dict, progress_cb=None) -> dict:
-    layers        = config.get("layers", [64, 32])
+    layers          = config.get("layers", [64, 32])
     activation_name = config.get("activation", "relu")
-    learning_rate = float(config.get("learning_rate", 0.001))
-    epochs        = min(int(config.get("epochs", 5)), 10)
-    batch_size    = int(config.get("batch_size", 32))
+    learning_rate   = float(config.get("learning_rate", 0.001))
+    epochs          = min(int(config.get("epochs", 5)), 10)
+    batch_size      = int(config.get("batch_size", 32))
+    dropout_rate    = float(config.get("dropout", 0.0))
+    seed            = int(config.get("dataset_seed", 42))
+
+    torch.manual_seed(seed)
 
     activation_map = {
-        "relu": nn.ReLU, "tanh": nn.Tanh, "sigmoid": nn.Sigmoid,
-        "leaky_relu": nn.LeakyReLU, "elu": nn.ELU,
+        "relu":       nn.ReLU,
+        "tanh":       nn.Tanh,
+        "sigmoid":    nn.Sigmoid,
+        "leaky_relu": lambda: nn.LeakyReLU(0.1),
+        "elu":        nn.ELU,
     }
     ActClass = activation_map.get(activation_name, nn.ReLU)
 
-    X_np, y_np = generate_benchmark_dataset()
+    X_np, y_np = generate_benchmark_dataset(seed=seed)
     n_features = len(X_np[0]) if X_np else 20
     n_classes  = 4
 
@@ -146,12 +198,15 @@ def train_and_evaluate(config: dict, progress_cb=None) -> dict:
     dataset = TensorDataset(X_t, y_t)
     loader  = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
+    # Build model with optional dropout
     layer_sizes = [n_features] + layers + [n_classes]
     net_layers  = []
     for i in range(len(layer_sizes) - 1):
         net_layers.append(nn.Linear(layer_sizes[i], layer_sizes[i + 1]))
         if i < len(layer_sizes) - 2:
             net_layers.append(ActClass())
+            if dropout_rate > 0:
+                net_layers.append(nn.Dropout(dropout_rate))
     model = nn.Sequential(*net_layers)
 
     opt_name = config.get("optimizer", "adam").lower()
@@ -165,7 +220,9 @@ def train_and_evaluate(config: dict, progress_cb=None) -> dict:
     criterion  = nn.CrossEntropyLoss()
     start      = time.time()
     final_loss = 0.0
+
     for epoch in range(1, epochs + 1):
+        model.train()
         for xb, yb in loader:
             optimizer.zero_grad()
             out  = model(xb)
@@ -173,12 +230,11 @@ def train_and_evaluate(config: dict, progress_cb=None) -> dict:
             loss.backward()
             optimizer.step()
             final_loss = loss.item()
-        # intermediate accuracy for progress callback
+        # Intermediate accuracy for progress callback
         model.eval()
         with torch.no_grad():
-            preds    = model(X_t).argmax(dim=1)
-            ep_acc   = (preds == y_t).float().mean().item()
-        model.train()
+            preds  = model(X_t).argmax(dim=1)
+            ep_acc = (preds == y_t).float().mean().item()
         if progress_cb:
             progress_cb(epoch, epochs, ep_acc)
 
@@ -186,15 +242,38 @@ def train_and_evaluate(config: dict, progress_cb=None) -> dict:
     model.eval()
     with torch.no_grad():
         preds    = model(X_t).argmax(dim=1)
-        accuracy = round((preds == y_t).float().mean().item(), 4)
+        accuracy = round((preds == y_t).float().mean().item(), 6)
+
+    param_count = sum(p.numel() for p in model.parameters())
 
     return {
         "accuracy": accuracy,
         "training_time_seconds": training_time,
         "epochs_completed": epochs,
-        "final_loss": round(final_loss, 4),
+        "final_loss": round(final_loss, 6),
+        "param_count": param_count,
         "torch_available": True,
+        "mode": "pytorch",
     }
+
+
+# ---------------------------------------------------------------------------
+# Result fingerprinting — matches coordinator hash exactly
+# ---------------------------------------------------------------------------
+
+def compute_result_hash(task_id: str, config: dict, metrics: dict) -> str:
+    """
+    Compute result hash matching the coordinator's verification logic.
+    Uses compact JSON (no spaces) and sha256, prefixed with 0x.
+    """
+    canonical = json.dumps({
+        "task_id": task_id,
+        "config": config,
+        "accuracy": metrics["accuracy"],
+        "final_loss": metrics.get("final_loss", -1.0),
+        "param_count": metrics.get("param_count", 0),
+    }, sort_keys=True, separators=(',', ':'))
+    return "0x" + hashlib.sha256(canonical.encode()).hexdigest()
 
 
 # ---------------------------------------------------------------------------
@@ -208,15 +287,16 @@ class BackendClient:
         self.api_key     = api_key
         self.max_retries = max_retries
         self.session     = requests.Session()
-        retry = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+        retry = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504],
+                      allowed_methods=["GET", "POST"])
         self.session.mount("https://", HTTPAdapter(max_retries=retry))
         self.session.mount("http://",  HTTPAdapter(max_retries=retry))
-
-    def _headers(self):
-        h = {"Content-Type": "application/json"}
-        if self.api_key:
-            h["X-API-Key"] = self.api_key
-        return h
+        self.session.headers.update({
+            "Content-Type": "application/json",
+            "User-Agent": f"GreenWaveCoin-Worker/{APP_VERSION}",
+        })
+        if api_key:
+            self.session.headers.update({"X-API-Key": api_key})
 
     def health_check(self):
         try:
@@ -228,37 +308,51 @@ class BackendClient:
             return False, 0
 
     def fetch_task(self):
+        """GET /api/tasks — returns next task or None if queue empty (204)."""
         try:
-            r = self.session.post(
-                f"{self.backend_url}/api/ai/tasks/fetch",
-                json={"wallet": self.wallet},
-                headers=self._headers(),
+            r = self.session.get(
+                f"{self.backend_url}/api/tasks",
                 timeout=30,
             )
             if r.status_code == 200:
                 return r.json().get("task")
+            # 204 = queue empty
             return None
         except Exception:
             return None
 
-    def submit_result(self, task_id, config, metrics):
-        # Use compact separators (no spaces) to match JavaScript JSON.stringify output.
-        # JS: JSON.stringify(obj, keys) produces {"key":value} without spaces.
-        # Python default json.dumps produces {"key": value} WITH spaces — causing hash mismatch.
-        payload_str = json.dumps(config, sort_keys=True, separators=(',', ':'))
-        result_hash = hashlib.sha256(
-            f"{task_id}:{payload_str}:{metrics['accuracy']:.4f}".encode()
-        ).hexdigest()
-        body = {"taskId": task_id, "wallet": self.wallet,
-                "metrics": metrics, "resultHash": result_hash}
+    def get_queue_length(self) -> int:
+        """Fetch current queue length from /api/tasks/stats."""
+        try:
+            r = self.session.get(f"{self.backend_url}/api/tasks/stats", timeout=8)
+            if r.status_code == 200:
+                return int(r.json().get("queueLength", 0))
+        except Exception:
+            pass
+        return 0
+
+    def submit_result(self, task_id: str, config: dict, metrics: dict) -> bool:
+        """POST /api/results — submit completed task result."""
+        result_hash = compute_result_hash(task_id, config, metrics)
+        body = {
+            "id": task_id,
+            "worker": self.wallet,
+            "hash": result_hash,
+            "signature": "0x" + "0" * 130,  # placeholder; server verifies hash
+            "metrics": metrics,
+            "config": config,
+        }
         for attempt in range(1, self.max_retries + 1):
             try:
                 r = self.session.post(
-                    f"{self.backend_url}/api/ai/tasks/submit",
-                    json=body, headers=self._headers(), timeout=30,
+                    f"{self.backend_url}/api/results",
+                    json=body,
+                    timeout=30,
                 )
                 if r.status_code in (200, 201):
                     return True
+                if r.status_code == 401:
+                    return False
             except Exception:
                 pass
             if attempt < self.max_retries:
@@ -301,42 +395,45 @@ class AccuracyChart(tk.Canvas):
         for pct in (0.25, 0.5, 0.75, 1.0):
             y = pad_y + inner_h * (1 - pct)
             self.create_line(pad_x, y, w - pad_x, y, fill=C_BORDER, dash=(2, 4))
-            self.create_text(pad_x - 2, y, text=f"{int(pct*100)}%",
-                             anchor="e", fill=C_MUTED, font=("Segoe UI", 7))
+            self.create_text(pad_x - 2, y, text=f"{pct:.0%}",
+                             anchor="e", font=("Consolas", 7), fill=C_MUTED)
 
         if len(self._data) < 2:
-            self.create_text(w // 2, h // 2, text="Waiting for tasks…",
-                             fill=C_MUTED, font=("Segoe UI", 9))
+            if self._data:
+                cx = pad_x + inner_w / 2
+                cy = pad_y + inner_h * (1 - self._data[0])
+                self.create_oval(cx - 3, cy - 3, cx + 3, cy + 3, fill=C_ACCENT, outline="")
             return
 
-        # Build points
-        n   = len(self._data)
-        pts = []
+        step = inner_w / (len(self._data) - 1)
+        pts  = []
         for i, v in enumerate(self._data):
-            x = pad_x + (i / (n - 1)) * inner_w
-            y = pad_y + inner_h * (1 - v)
+            x = pad_x + i * step
+            y = pad_y + inner_h * (1 - max(0.0, min(1.0, v)))
             pts.append((x, y))
 
-        # Filled area under line
-        poly_pts = [pad_x, pad_y + inner_h]
-        for x, y in pts:
-            poly_pts += [x, y]
-        poly_pts += [pts[-1][0], pad_y + inner_h]
-        self.create_polygon(poly_pts, fill="#00e5cc22", outline="")
+        # Gradient fill
+        for i in range(len(pts) - 1):
+            x1, y1 = pts[i]
+            x2, y2 = pts[i + 1]
+            self.create_polygon(
+                x1, y1, x2, y2,
+                x2, pad_y + inner_h, x1, pad_y + inner_h,
+                fill="#00e5cc22", outline="",
+            )
 
         # Line
-        for i in range(len(pts) - 1):
-            self.create_line(pts[i][0], pts[i][1], pts[i+1][0], pts[i+1][1],
-                             fill=C_ACCENT, width=2, smooth=True)
+        flat = [coord for p in pts for coord in p]
+        self.create_line(*flat, fill=C_ACCENT, width=2, smooth=True)
 
         # Dots
-        for x, y in pts[:-1]:
-            self.create_oval(x-2, y-2, x+2, y+2, fill=C_PANEL, outline=C_ACCENT, width=1)
-        # Last dot highlighted
+        for x, y in pts:
+            self.create_oval(x - 3, y - 3, x + 3, y + 3, fill=C_ACCENT, outline=C_BG, width=1)
+
+        # Latest value label
         lx, ly = pts[-1]
-        self.create_oval(lx-4, ly-4, lx+4, ly+4, fill=C_ACCENT, outline="")
-        self.create_text(lx, ly - 10, text=f"{self._data[-1]:.1%}",
-                         fill=C_ACCENT, font=("Segoe UI", 8, "bold"))
+        self.create_text(lx + 4, ly - 8, text=f"{self._data[-1]:.1%}",
+                         anchor="w", font=("Consolas", 8, "bold"), fill=C_ACCENT)
 
 
 # ---------------------------------------------------------------------------
@@ -344,27 +441,33 @@ class AccuracyChart(tk.Canvas):
 # ---------------------------------------------------------------------------
 
 class AnimatedProgressBar(tk.Canvas):
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, bg=C_PANEL, highlightthickness=0, height=18, **kwargs)
-        self._pct    = 0.0
-        self._target = 0.0
-        self._anim_id = None
+    def __init__(self, parent, height=8, **kwargs):
+        super().__init__(parent, height=height, bg=C_PANEL, highlightthickness=0, **kwargs)
+        self._progress = 0.0
+        self._anim_id  = None
+        self._target   = 0.0
         self.bind("<Configure>", lambda e: self._draw())
+
+    def set_progress(self, value: float):
+        self._target = max(0.0, min(1.0, value))
         self._animate()
 
-    def set_progress(self, pct: float):
-        self._target = max(0.0, min(1.0, pct))
-
     def reset(self):
-        self._pct    = 0.0
-        self._target = 0.0
+        if self._anim_id:
+            self.after_cancel(self._anim_id)
+            self._anim_id = None
+        self._progress = 0.0
+        self._target   = 0.0
         self._draw()
 
     def _animate(self):
-        if abs(self._pct - self._target) > 0.002:
-            self._pct += (self._target - self._pct) * 0.15
+        if abs(self._progress - self._target) < 0.005:
+            self._progress = self._target
             self._draw()
-        self.after(30, self._animate)
+            return
+        self._progress += (self._target - self._progress) * 0.15
+        self._draw()
+        self._anim_id = self.after(30, self._animate)
 
     def _draw(self):
         self.delete("all")
@@ -372,37 +475,19 @@ class AnimatedProgressBar(tk.Canvas):
         h = self.winfo_height()
         if w < 4:
             return
-        r = h // 2
-        # Track
-        self.create_rounded_rect(0, 0, w, h, r, fill=C_BORDER)
+        # Background track
+        self.create_rectangle(0, 0, w, h, fill=C_BORDER, outline="")
         # Fill
-        fw = max(0, int(w * self._pct))
-        if fw > 4:
-            self.create_rounded_rect(0, 0, fw, h, r, fill=C_ACCENT)
-        # Shimmer stripe
-        if fw > 20 and self._pct < 0.99:
-            sx = fw - 14
-            self.create_line(sx, 2, sx + 8, h - 2, fill="#ffffff33", width=4)
-        # Text
-        pct_text = f"{int(self._pct * 100)}%"
-        self.create_text(w // 2, h // 2, text=pct_text,
-                         fill=C_TEXT if self._pct > 0.5 else C_MUTED,
-                         font=("Segoe UI", 8, "bold"))
-
-    def create_rounded_rect(self, x1, y1, x2, y2, r, **kwargs):
-        r = min(r, (x2 - x1) // 2, (y2 - y1) // 2)
-        if r < 1:
-            self.create_rectangle(x1, y1, x2, y2, **kwargs)
-            return
-        self.create_polygon(
-            x1 + r, y1, x2 - r, y1,
-            x2, y1, x2, y1 + r,
-            x2, y2 - r, x2, y2,
-            x2 - r, y2, x1 + r, y2,
-            x1, y2, x1, y2 - r,
-            x1, y1 + r, x1, y1,
-            smooth=True, **kwargs
-        )
+        fill_w = int(w * self._progress)
+        if fill_w > 0:
+            # Color shifts green→teal as progress increases
+            self.create_rectangle(0, 0, fill_w, h, fill=C_ACCENT, outline="")
+        # Percentage text
+        if self._progress > 0.05:
+            self.create_text(w // 2, h // 2,
+                             text=f"{self._progress:.0%}",
+                             font=("Segoe UI", 7, "bold"),
+                             fill=C_BG if self._progress > 0.5 else C_TEXT)
 
 
 # ---------------------------------------------------------------------------
@@ -413,67 +498,89 @@ class PulsingDot(tk.Canvas):
     STATES = {
         "idle":       (C_MUTED,    False),
         "connecting": (C_WARN,     True),
-        "running":    (C_ACCENT,   True),
-        "stopped":    (C_WARN,     False),
-        "error":      (C_ERROR,    True),
+        "running":    (C_SUCCESS,  True),
+        "stopped":    (C_ERROR,    False),
     }
 
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, width=14, height=14, bg=C_BG,
-                         highlightthickness=0, **kwargs)
-        self._state  = "idle"
-        self._phase  = 0.0
-        self._pulse  = False
-        self._color  = C_MUTED
-        self._animate()
+    def __init__(self, parent, size=10, **kwargs):
+        super().__init__(parent, width=size, height=size,
+                         bg=C_BG, highlightthickness=0, **kwargs)
+        self._size    = size
+        self._state   = "idle"
+        self._phase   = 0.0
+        self._anim_id = None
+        self._draw()
 
     def set_state(self, state: str):
-        self._state, (self._color, self._pulse) = state, self.STATES.get(state, (C_MUTED, False))
+        self._state = state
+        color, pulse = self.STATES.get(state, (C_MUTED, False))
+        if pulse and not self._anim_id:
+            self._pulse()
+        elif not pulse:
+            if self._anim_id:
+                self.after_cancel(self._anim_id)
+                self._anim_id = None
+            self._phase = 0.0
+            self._draw()
 
-    def _animate(self):
+    def _pulse(self):
+        self._phase = (self._phase + 0.12) % (2 * math.pi)
+        self._draw()
+        self._anim_id = self.after(50, self._pulse)
+
+    def _draw(self):
         self.delete("all")
-        if self._pulse:
-            self._phase = (self._phase + 0.12) % (2 * math.pi)
-            alpha_scale = 0.4 + 0.6 * (0.5 + 0.5 * math.sin(self._phase))
-            outer_r = 5 + 3 * (0.5 + 0.5 * math.sin(self._phase))
-            # outer glow
-            self.create_oval(7 - outer_r, 7 - outer_r, 7 + outer_r, 7 + outer_r,
-                             fill="", outline=self._color, width=1)
-        self.create_oval(3, 3, 11, 11, fill=self._color, outline="")
-        self.after(40, self._animate)
+        color, pulse = self.STATES.get(self._state, (C_MUTED, False))
+        s = self._size
+        if pulse:
+            alpha = 0.5 + 0.5 * math.sin(self._phase)
+            pad = int(2 + 2 * alpha)
+        else:
+            pad = 2
+        self.create_oval(pad, pad, s - pad, s - pad, fill=color, outline="")
 
 
 # ---------------------------------------------------------------------------
-# Main Application
+# Main application
 # ---------------------------------------------------------------------------
 
 class GWCWorkerApp:
+
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(f"GreenWaveCoin Worker  v{APP_VERSION}")
-        self.root.geometry("820x680")
-        self.root.minsize(720, 580)
+        self.root.geometry("820x700")
+        self.root.minsize(720, 600)
         self.root.configure(bg=C_BG)
 
         # State
         self._worker_thread: Optional[threading.Thread] = None
-        self._running        = False
+        self._running          = False
         self._log_queue: queue.Queue = queue.Queue()
-        self._tasks_completed = 0
-        self._tasks_failed    = 0
-        self._gwc_earned      = 0.0
+        self._tasks_completed  = 0
+        self._tasks_failed     = 0
+        self._gwc_earned       = 0.0
         self._start_time: Optional[float] = None
-        self._current_epoch   = 0
-        self._total_epochs    = 1
+        self._current_epoch    = 0
+        self._total_epochs     = 1
         self._current_task_info = ""
-        self._latency_ms      = 0
+        self._latency_ms       = 0
         self._acc_history: List[float] = []
+        self._tray_icon        = None
 
         self._build_ui()
         self._poll_log_queue()
         self._tick_uptime()
         # Check for updates 3 seconds after startup (non-blocking)
         self.root.after(3000, self._check_for_update)
+
+        # Load saved wallet
+        cfg = load_config()
+        saved_wallet = cfg.get("wallet", "")
+        if saved_wallet and saved_wallet.startswith("0x") and len(saved_wallet) == 42:
+            self.wallet_entry.configure(fg=C_TEXT)
+            self.wallet_entry.delete(0, "end")
+            self.wallet_entry.insert(0, saved_wallet)
 
     # -----------------------------------------------------------------------
     # UI construction
@@ -514,7 +621,7 @@ class GWCWorkerApp:
 
         tk.Label(wf, text="Polygon Wallet Address", font=("Segoe UI", 9, "bold"),
                  fg=C_TEXT, bg=C_BG).pack(anchor="w")
-        tk.Label(wf, text="GWC rewards will be claimable at this address",
+        tk.Label(wf, text="GWC rewards will be claimable at this address  •  Saved automatically",
                  font=("Segoe UI", 8), fg=C_MUTED, bg=C_BG).pack(anchor="w", pady=(0, 4))
 
         entry_frame = tk.Frame(wf, bg=C_BORDER, padx=1, pady=1)
@@ -525,7 +632,7 @@ class GWCWorkerApp:
         self.wallet_var   = tk.StringVar()
         self.wallet_entry = tk.Entry(
             inner, textvariable=self.wallet_var,
-            font=("Consolas", 11), bg=C_PANEL, fg=C_TEXT,
+            font=("Consolas", 11), bg=C_PANEL, fg=C_MUTED,
             insertbackground=C_ACCENT, relief="flat", bd=0,
         )
         self.wallet_entry.pack(fill="x", ipady=9, ipadx=10)
@@ -557,6 +664,19 @@ class GWCWorkerApp:
             command=self._stop_worker,
         )
         self.stop_btn.pack(side="left")
+
+        # Minimize to tray button (only shown if pystray available)
+        if TRAY_AVAILABLE:
+            self.tray_btn = tk.Button(
+                bf, text="⊟  Minimize to Tray",
+                font=("Segoe UI", 9),
+                bg=C_BORDER, fg=C_MUTED,
+                activebackground="#2a3d5e", activeforeground=C_TEXT,
+                relief="flat", bd=0, padx=12, pady=10,
+                cursor="hand2",
+                command=self._minimize_to_tray,
+            )
+            self.tray_btn.pack(side="left", padx=(10, 0))
 
         # Network badge
         self._net_lbl = tk.Label(bf, text="⬤  Checking network…",
@@ -664,6 +784,12 @@ class GWCWorkerApp:
         self._chart = AccuracyChart(chart_panel, height=160)
         self._chart.pack(fill="both", expand=True, padx=4, pady=4)
 
+        # ── Footer ────────────────────────────────────────────────────────────
+        footer = tk.Frame(self.root, bg=C_BG)
+        footer.pack(fill="x", padx=20, pady=(0, 8))
+        tk.Label(footer, text=f"GreenWaveCoin Worker v{APP_VERSION}  •  greenwavecoin.com  •  Polygon Network",
+                 font=("Segoe UI", 8), fg=C_BORDER, bg=C_BG).pack(side="left")
+
         # ── Initial log messages ──────────────────────────────────────────────
         self._log("HEADER", f"GreenWaveCoin Worker v{APP_VERSION} ready.")
         self._log("INFO",   f"Coordinator : {BACKEND_URL}")
@@ -710,9 +836,13 @@ class GWCWorkerApp:
             self.wallet_entry.configure(fg=C_TEXT)
 
     def _restore_placeholder(self, _event=None):
-        if not self.wallet_var.get().strip():
+        val = self.wallet_var.get().strip()
+        if not val:
             self.wallet_entry.insert(0, "0x...")
             self.wallet_entry.configure(fg=C_MUTED)
+        elif val.startswith("0x") and len(val) == 42:
+            # Valid wallet — save it
+            save_config({"wallet": val})
 
     # -----------------------------------------------------------------------
     # Logging
@@ -769,7 +899,6 @@ class GWCWorkerApp:
                 latest_tag = data.get("tag_name", "").lstrip("v")
                 if not latest_tag:
                     return
-                # Simple version comparison (major.minor.patch)
                 def _ver(s):
                     try:
                         return tuple(int(x) for x in s.split("."))
@@ -778,11 +907,10 @@ class GWCWorkerApp:
                 if _ver(latest_tag) > _ver(APP_VERSION):
                     self.root.after(0, lambda: self._show_update_dialog(latest_tag))
             except Exception:
-                pass  # Silently ignore — update check is non-critical
+                pass
         threading.Thread(target=_do_check, daemon=True).start()
 
     def _show_update_dialog(self, latest_version: str):
-        """Show a non-blocking dialog prompting the user to update."""
         import webbrowser
         answer = messagebox.askyesno(
             "Update Available",
@@ -794,6 +922,43 @@ class GWCWorkerApp:
         )
         if answer:
             webbrowser.open(DOWNLOAD_PAGE)
+
+    # -----------------------------------------------------------------------
+    # System tray
+    # -----------------------------------------------------------------------
+
+    def _minimize_to_tray(self):
+        if not TRAY_AVAILABLE:
+            return
+        self.root.withdraw()
+
+        def _create_icon_image():
+            """Create a simple teal circle icon."""
+            try:
+                img = PILImage.new("RGBA", (64, 64), (0, 0, 0, 0))
+                from PIL import ImageDraw
+                draw = ImageDraw.Draw(img)
+                draw.ellipse([4, 4, 60, 60], fill=(0, 229, 204, 255))
+                return img
+            except Exception:
+                return PILImage.new("RGBA", (64, 64), (0, 229, 204, 255))
+
+        def _restore(_icon, _item):
+            _icon.stop()
+            self._tray_icon = None
+            self.root.after(0, self.root.deiconify)
+
+        menu = pystray.Menu(
+            pystray.MenuItem("Restore", _restore, default=True),
+            pystray.MenuItem("Quit", lambda i, it: (i.stop(), self.root.after(0, self.root.destroy))),
+        )
+        self._tray_icon = pystray.Icon(
+            "GreenWaveCoin Worker",
+            _create_icon_image(),
+            f"GreenWaveCoin Worker v{APP_VERSION}",
+            menu,
+        )
+        threading.Thread(target=self._tray_icon.run, daemon=True).start()
 
     # -----------------------------------------------------------------------
     # Network ping
@@ -818,24 +983,31 @@ class GWCWorkerApp:
             try:
                 r = requests.get(f"{BACKEND_URL}/api/ai/stats", timeout=8)
                 if r.status_code == 200:
-                    data = r.json()
-                    total = data.get("totalTasksCompleted", data.get("totalResults", 0))
+                    data    = r.json()
+                    total   = data.get("totalTasksCompleted", data.get("totalResults", 0))
                     workers = data.get("uniqueWorkers", 0)
-                    self.root.after(0, lambda: self._stat_network.configure(
-                        text=f"{total:,}"))
-                    self.root.after(0, lambda: self._stat_workers.configure(
-                        text=str(workers)))
+                    self.root.after(0, lambda: self._stat_network.configure(text=f"{total:,}"))
+                    self.root.after(0, lambda: self._stat_workers.configure(text=str(workers)))
             except Exception:
-                pass  # Silently ignore — non-critical
+                pass
         threading.Thread(target=_do_fetch, daemon=True).start()
         self.root.after(60_000, self._poll_network_stats)
 
     def _update_net_badge(self, ok: bool, ms: int):
         if ok:
-            color = C_SUCCESS if ms < 200 else C_WARN
-            self._net_lbl.configure(text=f"⬤  Network OK  {ms}ms", fg=color)
+            if ms < 150:
+                color = C_SUCCESS
+                label = f"⬤  Network OK  {ms}ms"
+            elif ms < 400:
+                color = C_WARN
+                label = f"⬤  Network OK  {ms}ms"
+            else:
+                color = C_ERROR
+                label = f"⬤  High latency  {ms}ms"
         else:
-            self._net_lbl.configure(text="⬤  Network unreachable", fg=C_ERROR)
+            color = C_ERROR
+            label = "⬤  Network unreachable"
+        self._net_lbl.configure(text=label, fg=color)
 
     # -----------------------------------------------------------------------
     # Worker control
@@ -850,11 +1022,14 @@ class GWCWorkerApp:
         if not self._validate_wallet(wallet):
             messagebox.showerror(
                 "Invalid Wallet",
-                "Please enter a valid Ethereum wallet address.\n"
+                "Please enter a valid Polygon wallet address.\n"
                 "It must start with 0x and be 42 characters long.\n\n"
                 "Example: 0xA90Aaf362b047481C4033Ec26b19264eAC2e94c4"
             )
             return
+
+        # Save wallet for next session
+        save_config({"wallet": wallet})
 
         self._running          = True
         self._tasks_completed  = 0
@@ -901,8 +1076,7 @@ class GWCWorkerApp:
     def _on_epoch(self, epoch: int, total: int, acc: float):
         pct = epoch / total
         self.root.after(0, lambda: self._progress_bar.set_progress(pct))
-        self.root.after(0, lambda: self._epoch_lbl.configure(
-            text=f"{epoch} / {total}"))
+        self.root.after(0, lambda: self._epoch_lbl.configure(text=f"{epoch} / {total}"))
         self.root.after(0, lambda: self._live_acc_lbl.configure(
             text=f"{acc:.2%}", fg=C_ACCENT))
 
@@ -919,7 +1093,7 @@ class GWCWorkerApp:
             sr = self._tasks_completed / total
             self._stat_success.configure(
                 text=f"{sr:.0%}",
-                fg=C_SUCCESS if sr >= 0.9 else C_WARN if sr >= 0.7 else C_ERROR
+                fg=C_SUCCESS if sr >= 0.85 else C_WARN if sr >= 0.6 else C_ERROR
             )
         if acc is not None:
             self._chart.add_point(acc)
@@ -933,13 +1107,14 @@ class GWCWorkerApp:
                                max_retries=MAX_RETRIES)
 
         self._log("HEADER", "━" * 48)
-        self._log("HEADER", "  GreenWaveCoin AI Worker  —  Starting")
+        self._log("HEADER", f"  GreenWaveCoin AI Worker  v{APP_VERSION}  —  Starting")
         self._log("INFO",   f"  Wallet  : {wallet[:10]}…{wallet[-6:]}")
         self._log("INFO",   f"  Backend : {BACKEND_URL}")
+        self._log("INFO",   f"  Compute : {'PyTorch' if TORCH_AVAILABLE else 'NumPy fallback'}")
         self._log("HEADER", "━" * 48)
         self._log("INFO",   "Connecting to coordinator…")
 
-        # Wait for backend
+        # Wait for backend with exponential backoff
         backoff = 5
         while self._running:
             ok, ms = client.health_check()
@@ -960,24 +1135,32 @@ class GWCWorkerApp:
 
         self._log("SUCCESS", "Connected to coordinator!  Fetching tasks…")
         self.root.after(0, lambda: self._dot.set_state("running"))
-        self.root.after(0, lambda: self._status_lbl.configure(
-            text="Running", fg=C_ACCENT))
+        self.root.after(0, lambda: self._status_lbl.configure(text="Running", fg=C_ACCENT))
+
+        no_task_count = 0
 
         while self._running:
             try:
                 task = client.fetch_task()
+
                 if task is None:
-                    self._log("INFO",
-                              f"No tasks available — waiting {POLL_INTERVAL}s…  "
-                              f"(done: {self._tasks_completed})")
-                    self.root.after(0, lambda: self._task_id_lbl.configure(
-                        text="⏳  Waiting for tasks…"))
+                    no_task_count += 1
+                    # Fetch queue length to give better feedback
+                    queue_len = client.get_queue_length()
+                    if queue_len == 0:
+                        msg = f"Queue empty — new tasks generated every ~5 min  (wait #{no_task_count})"
+                    else:
+                        msg = f"No task assigned yet — queue has {queue_len} tasks  (wait #{no_task_count})"
+                    self._log("INFO", msg)
+                    self.root.after(0, lambda m=msg: self._task_id_lbl.configure(
+                        text=f"⏳  {m[:50]}…" if len(msg) > 50 else f"⏳  {msg}"))
                     for _ in range(POLL_INTERVAL):
                         if not self._running:
                             break
                         time.sleep(1)
                     continue
 
+                no_task_count = 0
                 task_id     = task["id"]
                 raw_payload = task.get("payload", "{}")
                 try:
@@ -994,7 +1177,7 @@ class GWCWorkerApp:
                 epochs = min(int(config.get("epochs", 5)), 10)
 
                 short_id = task_id[:8] if len(task_id) >= 8 else task_id
-                self._log("INFO", f"Task {short_id}…  layers={layers}  act={act}  opt={opt}")
+                self._log("INFO", f"Task {short_id}…  layers={layers}  act={act}  opt={opt}  lr={lr}")
 
                 self.root.after(0, lambda sid=short_id: self._task_id_lbl.configure(
                     text=f"🔬  Task {sid}…"))
@@ -1003,8 +1186,7 @@ class GWCWorkerApp:
                 self.root.after(0, lambda o=opt, r=lr: self._task_opt_lbl.configure(
                     text=f"Optimizer: {o}  |  LR: {r}"))
                 self.root.after(0, lambda: self._progress_bar.reset())
-                self.root.after(0, lambda e=epochs: self._epoch_lbl.configure(
-                    text=f"0 / {e}"))
+                self.root.after(0, lambda e=epochs: self._epoch_lbl.configure(text=f"0 / {e}"))
                 self.root.after(0, lambda: self._live_acc_lbl.configure(
                     text="Training…", fg=C_WARN))
 
@@ -1022,8 +1204,7 @@ class GWCWorkerApp:
 
                 acc = metrics.get("accuracy", 0)
                 t   = metrics.get("training_time_seconds", 0)
-                self._log("SUCCESS",
-                          f"✓ Task done  accuracy={acc:.2%}  time={t:.1f}s")
+                self._log("SUCCESS", f"✓ Task done  accuracy={acc:.2%}  time={t:.1f}s")
                 self.root.after(0, lambda a=acc: self._live_acc_lbl.configure(
                     text=f"{a:.2%}", fg=C_SUCCESS))
                 self.root.after(0, lambda: self._progress_bar.set_progress(1.0))
@@ -1066,8 +1247,38 @@ def main():
         pass
 
     app = GWCWorkerApp(root)
-    root.protocol("WM_DELETE_WINDOW",
-                  lambda: (app._stop_worker() if app._running else None) or root.destroy())
+
+    def _on_close():
+        if app._running:
+            if TRAY_AVAILABLE:
+                answer = messagebox.askyesnocancel(
+                    "Worker Running",
+                    "The worker is still running.\n\n"
+                    "• Yes — Minimize to system tray (keep running)\n"
+                    "• No — Stop worker and quit\n"
+                    "• Cancel — Go back",
+                )
+                if answer is True:
+                    app._minimize_to_tray()
+                    return
+                elif answer is False:
+                    app._stop_worker()
+                    root.after(1500, root.destroy)
+                    return
+                else:
+                    return  # Cancel
+            else:
+                answer = messagebox.askyesno(
+                    "Worker Running",
+                    "The worker is still running. Stop it and quit?",
+                )
+                if answer:
+                    app._stop_worker()
+                    root.after(1500, root.destroy)
+                return
+        root.destroy()
+
+    root.protocol("WM_DELETE_WINDOW", _on_close)
     root.mainloop()
 
 

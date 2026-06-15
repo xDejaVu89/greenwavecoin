@@ -7,9 +7,26 @@ import { validateSubmitResult } from '../middleware/validate';
 export const resultsRouter = Router();
 
 /**
+ * Deep-sort replacer for JSON.stringify — sorts all object keys recursively.
+ * This matches Python's json.dumps(sort_keys=True) behavior exactly.
+ */
+function deepSortReplacer(_key: string, value: unknown): unknown {
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    return Object.keys(value as Record<string, unknown>)
+      .sort()
+      .reduce((sorted: Record<string, unknown>, k) => {
+        sorted[k] = (value as Record<string, unknown>)[k];
+        return sorted;
+      }, {});
+  }
+  return value;
+}
+
+/**
  * Verify the AI result hash submitted by a worker.
  * The hash is a SHA-256 of: { task_id, config, accuracy, final_loss, param_count }
- * sorted by key, matching the Python worker's compute_result_hash() function.
+ * with ALL keys sorted recursively (matching Python's json.dumps(sort_keys=True,
+ * separators=(',', ':')) behavior).
  */
 function verifyAIHash(
   taskId: string,
@@ -25,7 +42,8 @@ function verifyAIHash(
       final_loss: metrics.final_loss,
       param_count: metrics.param_count,
     };
-    const canonical = JSON.stringify(obj, Object.keys(obj).sort());
+    // Use deepSortReplacer + no spaces to match Python: json.dumps(sort_keys=True, separators=(',', ':'))
+    const canonical = JSON.stringify(obj, deepSortReplacer as (key: string, value: unknown) => unknown);
     const expected = '0x' + createHash('sha256').update(canonical).digest('hex');
     return expected.toLowerCase() === submittedHash.toLowerCase();
   } catch {
