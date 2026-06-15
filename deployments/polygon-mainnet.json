@@ -1,18 +1,10 @@
 {
   "network": "polygon",
   "chainId": 137,
-  "token": "0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9",
-  "staking": "0x6a5e4DE78a5Be75c308fCb5833ECC35412511D86",
-  "timelock": "0xC3F5B6f9E9b531146D23F702AbE930318159Ed02",
-  "deployer": "0x6D51d80017C66afBeD44D50c775f46C60Bbb56af",
-  "deployedAt": "2026-06-11T22:49:36.605Z",
-  "rewardEscrow": "0xB73385634051a14Be22B2973Fc530A122e3548B0",
-  "rewardEscrowDeployedAt": "2026-06-12T18:04:58.342Z",
-  "rewardEscrowFundedAt": "2026-06-12T18:35:00.000Z",
-  "rewardEscrowBalance": "4985000",
-  "flashProtection": {
-    "enabled": true,
-    "maxTransferAmount": "210000",
-    "maxTransfersPerBlock": 5
-  }
+  "token": "0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2",
+  "staking": "0xc7E3F6Ea546253567FCBDBFA8c4047cF1775b23B",
+  "timelock": "0xc1f49e9A38C62a643eAEDade01578727be2Ee61b",
+  "totalSupply": "1000000000",
+  "deployedAt": "2026-06-15T21:12:06Z",
+  "version": "1.0.0"
 }

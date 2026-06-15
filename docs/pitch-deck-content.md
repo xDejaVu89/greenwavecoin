@@ -171,7 +171,7 @@
 - Email: contact@greenwavecoin.com
 - Twitter/X: @GreenWaveCoin
 - GitHub: github.com/xDejaVu89/greenwavecoin
-- Token: 0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 (Polygon)
+- Token: 0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2 (Polygon)
 
 **Next steps for investors:**
 1. Review the open-source codebase on GitHub

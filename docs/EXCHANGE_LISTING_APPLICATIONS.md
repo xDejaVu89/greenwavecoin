@@ -17,13 +17,13 @@ Pre-filled application data for CoinGecko and CoinMarketCap.
 | **Coin/Token Name** | GreenWaveCoin |
 | **Ticker Symbol** | GWC |
 | **Network/Chain** | Polygon (Matic) |
-| **Contract Address** | `0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9` |
+| **Contract Address** | `0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2` |
 | **Decimals** | 18 |
 | **Total Supply** | 10,000,000 GWC |
 | **Circulating Supply** | ~15,000 GWC (early distribution; update at time of submission) |
 | **Website** | https://greenwavecoin.com |
 | **Whitepaper / Docs** | https://greenwavecoin.com/blog/how-it-works |
-| **Block Explorer** | https://polygonscan.com/token/0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 |
+| **Block Explorer** | https://polygonscan.com/token/0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2 |
 | **GitHub** | https://github.com/xDejaVu89/greenwavecoin |
 | **Twitter/X** | https://x.com/GreenWaveCoin |
 | **Discord** | https://discord.gg/RZgnnbjrH4 |
@@ -37,7 +37,7 @@ Pre-filled application data for CoinGecko and CoinMarketCap.
 
 ### Additional Details (copy-paste)
 
-> - Token contract verified on PolygonScan: https://polygonscan.com/token/0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9
+> - Token contract verified on PolygonScan: https://polygonscan.com/token/0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2
 > - Reward escrow contract: 0xB73385634051a14Be22B2973Fc530A122e3548B0 (holds 4,985,000 GWC worker reward pool)
 > - Worker software (Windows): https://github.com/xDejaVu89/greenwavecoin/releases/latest
 > - Tokenomics: 49.85% worker rewards, 20% team (3-year vest), 15% ecosystem, 10% reserve, 5% liquidity
@@ -58,9 +58,9 @@ Pre-filled application data for CoinGecko and CoinMarketCap.
 | **Coin/Token Name** | GreenWaveCoin |
 | **Ticker Symbol** | GWC |
 | **Network** | Polygon |
-| **Contract Address** | `0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9` |
+| **Contract Address** | `0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2` |
 | **Website** | https://greenwavecoin.com |
-| **Block Explorer URL** | https://polygonscan.com/token/0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 |
+| **Block Explorer URL** | https://polygonscan.com/token/0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2 |
 | **Source Code** | https://github.com/xDejaVu89/greenwavecoin |
 | **Whitepaper** | https://greenwavecoin.com/blog/how-it-works |
 | **Twitter** | https://x.com/GreenWaveCoin |
@@ -80,7 +80,7 @@ CMC recommends completing [Annex M](https://docs.google.com/spreadsheets/d/1ON2o
 | Project Name | GreenWaveCoin |
 | Ticker | GWC |
 | Chain | Polygon |
-| Contract | 0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 |
+| Contract | 0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2 |
 | Token Standard | ERC-20 |
 | Total Supply | 10,000,000 |
 | Max Supply | 10,000,000 |

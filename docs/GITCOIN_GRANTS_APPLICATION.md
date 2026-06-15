@@ -102,7 +102,7 @@ The project is **live on Polygon Mainnet** as of Q1 2026.
 | CoinGecko / CMC listing | 🔄 Planned Q3 2026 (after liquidity) |
 
 **Contract Addresses (Polygon Mainnet):**
-- GWC Token: `0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9`
+- GWC Token: `0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2`
 - RewardEscrowV2: Verified on Polygonscan
 
 ---
@@ -163,7 +163,7 @@ The project is open-source and welcomes contributors. Grant funding will be used
 | Website | https://greenwavecoin.com |
 | GitHub | https://github.com/xDejaVu89/greenwavecoin |
 | Coordinator API | https://api.greenwavecoin.com/health |
-| GWC Token (Polygonscan) | https://polygonscan.com/token/0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 |
+| GWC Token (Polygonscan) | https://polygonscan.com/token/0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2 |
 | Trust Wallet PR | https://github.com/trustwallet/assets/pull/37073 |
 | Worker Download | https://greenwavecoin.com (Download section) |
 | Contact | s4dejavu@gmail.com |

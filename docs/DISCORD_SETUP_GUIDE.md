@@ -115,7 +115,7 @@ Post this in `#welcome` (pin the message):
 > **Useful links:**
 > 🌐 Website: https://greenwavecoin.com
 > 📂 GitHub: https://github.com/xDejaVu89/greenwavecoin
-> 🔗 Token: 0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 (Polygon)
+> 🔗 Token: 0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2 (Polygon)
 > 📊 Coordinator: https://api.greenwavecoin.com
 >
 > Questions? Head to #worker-setup or #general. The team is active and responsive.
@@ -177,7 +177,7 @@ Post this in `#faq` (pin the message):
 > A: GWC is currently traded via direct wallet transfers. A QuickSwap liquidity pool is planned for Q3 2026, followed by CoinGecko and CoinMarketCap listings.
 >
 > **Q: Where is the token contract?**
-> A: GWC Token: `0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9` on Polygon Mainnet. Verified on Polygonscan.
+> A: GWC Token: `0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2` on Polygon Mainnet. Verified on Polygonscan.
 >
 > **Q: Is the code open-source?**
 > A: Yes. The coordinator, worker, and smart contracts are all open-source at github.com/xDejaVu89/greenwavecoin.
@@ -212,7 +212,7 @@ Install the following bots to automate server management and engagement:
 
 ### Collab.Land (Token Gating — Optional)
 - **Purpose:** Verify GWC token holders and assign roles based on holdings
-- **Setup:** collab.land → Connect Discord → Add rule: Polygon chain, GWC contract `0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9`, minimum 100 GWC → assign "Top Worker" or custom holder role
+- **Setup:** collab.land → Connect Discord → Add rule: Polygon chain, GWC contract `0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2`, minimum 100 GWC → assign "Top Worker" or custom holder role
 - **Use case:** Create exclusive channels for verified GWC holders
 
 ---

@@ -16,7 +16,7 @@ Tip.cc supports custom ERC-20 tokens on Polygon. Once GWC has a liquidity pool, 
    - **Token Name:** GreenWaveCoin
    - **Ticker:** GWC
    - **Network:** Polygon (MATIC)
-   - **Contract Address:** `0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9`
+   - **Contract Address:** `0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2`
    - **DEX Pool URL:** *(QuickSwap pool URL — add after pool creation)*
    - **CoinGecko / CMC URL:** *(add after listing)*
 3. Submit and wait for approval (usually 1–3 days after listing on CoinGecko/CMC)
@@ -40,7 +40,7 @@ A price bot shows the live GWC price in the Discord server sidebar as a bot nick
 
 ### Alternative: Crypto Price Bot
 1. Invite: https://discord.com/oauth2/authorize?client_id=706935674800177193&scope=bot&permissions=8
-2. In `#🤖-bot` channel type: `!add GWC polygon 0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9`
+2. In `#🤖-bot` channel type: `!add GWC polygon 0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2`
 
 ### Note
 Both bots pull price data from CoinGecko or DEX aggregators. The price will only show correctly after:

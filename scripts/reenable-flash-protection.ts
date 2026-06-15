@@ -4,7 +4,7 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log(`Deployer: ${deployer.address}`);
 
-  const gwcAddress = "0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9";
+  const gwcAddress = "0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2";
 
   const gwcAbi = [
     "function balanceOf(address) view returns (uint256)",

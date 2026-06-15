@@ -52,20 +52,27 @@ router.get('/leaderboard', (_req: Request, res: Response) => {
 
   // Build leaderboard array
   const leaderboard = Object.values(workerStats)
-    .map(w => ({
-      wallet: w.wallet,
-      tasksCompleted: w.tasksCompleted,
-      averageAccuracy: w.tasksCompleted > 0
+    .map(w => {
+      const avgAccuracy = w.tasksCompleted > 0
         ? Math.round((w.totalAccuracy / w.tasksCompleted) * 10000) / 10000
-        : 0,
-      totalTrainingTimeSeconds: Math.round(w.totalTrainingTime),
-      invalidSubmissions: w.invalidSubmissions,
-      // Estimated GWC reward: 1 GWC per valid task + accuracy bonus
-      estimatedGwcReward: parseFloat(
-        (w.tasksCompleted + w.totalAccuracy * 0.5).toFixed(4)
-      ),
-    }))
-    .sort((a, b) => b.tasksCompleted - a.tasksCompleted);
+        : 0;
+      return {
+        wallet: w.wallet,
+        // Frontend-compatible field names
+        tasks: w.tasksCompleted,
+        avgAccuracy,
+        // Extended fields
+        tasksCompleted: w.tasksCompleted,
+        averageAccuracy: avgAccuracy,
+        totalTrainingTimeSeconds: Math.round(w.totalTrainingTime),
+        invalidSubmissions: w.invalidSubmissions,
+        // Estimated GWC reward: 1 GWC per valid task + accuracy bonus
+        estimatedGwcReward: parseFloat(
+          (w.tasksCompleted + w.totalAccuracy * 0.5).toFixed(4)
+        ),
+      };
+    })
+    .sort((a, b) => b.tasks - a.tasks);
 
   res.json({ leaderboard, totalResults: results.length });
 });
@@ -135,9 +142,11 @@ router.get('/stats', (_req: Request, res: Response) => {
     totalTasksCompleted: validResults.length,
     totalInvalidSubmissions: invalidResults.length,
     uniqueWorkers: uniqueWorkers.size,
+    queueLength: taskService.getQueueLength(),
     averageAccuracy: validResults.length > 0
       ? Math.round((totalAccuracy / validResults.length) * 10000) / 10000
       : 0,
+    bestAccuracy: Math.round(bestAccuracy * 10000) / 10000,
     bestAccuracyEver: Math.round(bestAccuracy * 10000) / 10000,
     totalComputeSeconds: Math.round(totalTrainingTime),
     networkStatus: 'active',
@@ -207,9 +216,13 @@ router.post('/tasks/submit', requireWorkerKey, (req: Request, res: Response) => 
 
   // Verify the simplified hash the GUI worker sends:
   // SHA-256 of "taskId:configJSON:accuracy.4f"
+  // Note: JS JSON.parse coerces 0.0 -> 0, but Python json.loads preserves 0.0.
+  // We normalize by re-serializing through JSON.parse to match JS behavior.
   let validSignature = false;
   try {
-    const payloadStr = JSON.stringify(config, Object.keys(config).sort());
+    // Normalize config through JSON round-trip to coerce floats like 0.0 -> 0
+    const normalizedConfig = JSON.parse(JSON.stringify(config));
+    const payloadStr = JSON.stringify(normalizedConfig, Object.keys(normalizedConfig).sort());
     const expected = createHash('sha256')
       .update(`${taskId}:${payloadStr}:${(metrics.accuracy as number).toFixed(4)}`)
       .digest('hex');

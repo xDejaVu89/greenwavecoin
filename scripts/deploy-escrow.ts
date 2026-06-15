@@ -9,7 +9,7 @@ async function main() {
   console.log("Deploying with account:", deployer.address);
 
   // Polygon Mainnet GWC token address
-  const gwcTokenAddress = "0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9";
+  const gwcTokenAddress = "0x7709cD433dCCf28467d2c9084f4d4db89f3E87B2";
   console.log("Using GWC Token at:", gwcTokenAddress);
 
   console.log("Deploying RewardEscrowV2 (non-upgradeable)...");
