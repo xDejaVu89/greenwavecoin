@@ -25,8 +25,8 @@ Pre-filled application data for CoinGecko and CoinMarketCap.
 | **Whitepaper / Docs** | https://greenwavecoin.com/blog/how-it-works |
 | **Block Explorer** | https://polygonscan.com/token/0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 |
 | **GitHub** | https://github.com/xDejaVu89/greenwavecoin |
-| **Twitter/X** | *(add your Twitter handle here)* |
-| **Discord** | *(add Discord invite link here, if applicable)* |
+| **Twitter/X** | https://x.com/GreenWaveCoin |
+| **Discord** | https://discord.gg/RZgnnbjrH4 |
 | **Telegram** | *(add Telegram link here, if applicable)* |
 | **Logo** | 200×200 PNG — export from greenwavecoin.com favicon or generate a clean version |
 | **Exchange Listing** | QuickSwap v3 — GWC/MATIC or GWC/USDC *(add pool URL after creation)* |
@@ -63,7 +63,7 @@ Pre-filled application data for CoinGecko and CoinMarketCap.
 | **Block Explorer URL** | https://polygonscan.com/token/0x11b48853Ce85Ebf4b1a0AEd9cbE1c951017E16F9 |
 | **Source Code** | https://github.com/xDejaVu89/greenwavecoin |
 | **Whitepaper** | https://greenwavecoin.com/blog/how-it-works |
-| **Twitter** | *(add your Twitter handle here)* |
+| **Twitter** | https://x.com/GreenWaveCoin |
 | **Exchange/Market URL** | *(QuickSwap pool URL — add after pool creation)* |
 | **Logo** | 200×200 PNG (same as CoinGecko) |
 
