@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GreenWaveCoin AI Worker — Desktop GUI v1.0.6
+GreenWaveCoin AI Worker — Desktop GUI v1.0.7
 =============================================
 A polished, engaging Windows/Mac/Linux desktop app for running the
 GreenWaveCoin distributed AI research worker.
@@ -17,6 +17,8 @@ Features:
 - System tray support (minimize to tray, keep running in background)
 - Improved hash computation matching coordinator
 - Better no-tasks UX with queue status
+- Neural network visualizer with live signal propagation animation
+- Live status bar with real-time metrics
 
 Packaged with PyInstaller into a single .exe for Windows users.
 """
@@ -26,6 +28,7 @@ import json
 import math
 import os
 import queue
+import random
 import sys
 import threading
 import time
@@ -87,7 +90,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 BACKEND_URL    = "https://api.greenwavecoin.com"
 WORKER_API_KEY = "gwc-worker-2025"
-APP_VERSION    = "1.0.6"
+APP_VERSION    = "1.0.7"
 POLL_INTERVAL  = 30
 MAX_RETRIES    = 3
 GWC_PER_TASK   = 0.5   # estimated GWC reward per completed task
@@ -480,7 +483,6 @@ class AnimatedProgressBar(tk.Canvas):
         # Fill
         fill_w = int(w * self._progress)
         if fill_w > 0:
-            # Color shifts green→teal as progress increases
             self.create_rectangle(0, 0, fill_w, h, fill=C_ACCENT, outline="")
         # Percentage text
         if self._progress > 0.05:
@@ -541,6 +543,357 @@ class PulsingDot(tk.Canvas):
 
 
 # ---------------------------------------------------------------------------
+# Neural Network Visualizer — animated signal propagation
+# ---------------------------------------------------------------------------
+
+class NeuralNetCanvas(tk.Canvas):
+    """
+    Draws a live neural network diagram with animated signal pulses flowing
+    forward through layers. Reflects the actual architecture being trained.
+
+    States:
+      idle     — slow dim background pulse, muted colours
+      running  — bright signals fire continuously through layers
+      stopped  — static, all nodes dim
+    """
+
+    # Pulse: a dict with keys layer_idx, node_idx, progress (0→1), color
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, bg=C_BG, highlightthickness=0, **kwargs)
+        self._state   = "idle"
+        self._layers  = [4, 8, 6, 4]   # default architecture (input, hidden..., output)
+        self._pulses  = []              # active signal pulses
+        self._phase   = 0.0            # global animation phase
+        self._anim_id = None
+        self._tick    = 0
+        self._last_acc = 0.0
+        self._last_loss = 0.0
+        self._spawn_counter = 0
+        self.bind("<Configure>", lambda e: self._redraw_static())
+        self._start_animation()
+
+    # ── Public API ──────────────────────────────────────────────────────────
+
+    def set_state(self, state: str):
+        self._state = state
+
+    def set_architecture(self, layers: list):
+        """Update the displayed architecture (list of layer sizes)."""
+        # Cap display at 6 layers, 12 nodes per layer for visual clarity
+        capped = [min(n, 12) for n in layers[:6]]
+        if capped != self._layers:
+            self._layers = capped
+            self._pulses.clear()
+
+    def set_metrics(self, acc: float = 0.0, loss: float = 0.0):
+        self._last_acc  = acc
+        self._last_loss = loss
+
+    # ── Internal ────────────────────────────────────────────────────────────
+
+    def _start_animation(self):
+        self._animate()
+
+    def _animate(self):
+        self._phase = (self._phase + 0.04) % (2 * math.pi)
+        self._tick += 1
+
+        # Spawn new pulses when running
+        if self._state == "running":
+            self._spawn_counter += 1
+            # Spawn a new pulse every ~12 ticks (~480ms at 40ms interval)
+            if self._spawn_counter >= 12:
+                self._spawn_counter = 0
+                self._spawn_pulse()
+        elif self._state == "idle":
+            # Occasional slow pulse in idle
+            self._spawn_counter += 1
+            if self._spawn_counter >= 60:
+                self._spawn_counter = 0
+                self._spawn_pulse(dim=True)
+
+        # Advance existing pulses
+        speed = 0.06 if self._state == "running" else 0.025
+        dead  = []
+        for p in self._pulses:
+            p["progress"] += speed
+            if p["progress"] >= 1.0:
+                # Jump to next layer
+                p["layer_idx"] += 1
+                p["progress"]   = 0.0
+                if p["layer_idx"] >= len(self._layers) - 1:
+                    dead.append(p)
+                else:
+                    # Pick a random target node in the next layer
+                    p["from_node"] = p["to_node"]
+                    p["to_node"]   = random.randint(0, self._layers[p["layer_idx"] + 1] - 1)
+        for p in dead:
+            self._pulses.remove(p)
+
+        self._redraw()
+        self._anim_id = self.after(40, self._animate)
+
+    def _spawn_pulse(self, dim=False):
+        if len(self._layers) < 2:
+            return
+        # Cap concurrent pulses
+        max_pulses = 8 if self._state == "running" else 2
+        if len(self._pulses) >= max_pulses:
+            return
+        # Pick a random starting node in layer 0
+        from_node = random.randint(0, self._layers[0] - 1)
+        to_node   = random.randint(0, self._layers[1] - 1)
+        if dim:
+            color = C_BORDER
+        else:
+            # Cycle through accent colours for variety
+            color = random.choice([C_ACCENT, C_ACCENT2, C_SUCCESS])
+        self._pulses.append({
+            "layer_idx": 0,
+            "from_node": from_node,
+            "to_node":   to_node,
+            "progress":  0.0,
+            "color":     color,
+        })
+
+    def _node_positions(self, w, h):
+        """Return {layer_idx: [(x, y), ...]} for all nodes."""
+        n_layers  = len(self._layers)
+        pad_x     = 40
+        pad_y     = 30
+        inner_w   = w - pad_x * 2
+        inner_h   = h - pad_y * 2
+        positions = {}
+        for li, n_nodes in enumerate(self._layers):
+            x = pad_x + (li / max(n_layers - 1, 1)) * inner_w
+            positions[li] = []
+            for ni in range(n_nodes):
+                y = pad_y + (ni / max(n_nodes - 1, 1)) * inner_h if n_nodes > 1 else h / 2
+                positions[li].append((x, y))
+        return positions
+
+    def _hex_to_rgb(self, hex_color: str):
+        h = hex_color.lstrip("#")
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+    def _lerp_color(self, c1: str, c2: str, t: float) -> str:
+        r1, g1, b1 = self._hex_to_rgb(c1)
+        r2, g2, b2 = self._hex_to_rgb(c2)
+        r = int(r1 + (r2 - r1) * t)
+        g = int(g1 + (g2 - g1) * t)
+        b = int(b1 + (b2 - b1) * t)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    def _redraw_static(self):
+        """Called on resize — just trigger a full redraw."""
+        self._redraw()
+
+    def _redraw(self):
+        self.delete("all")
+        w = self.winfo_width()
+        h = self.winfo_height()
+        if w < 40 or h < 40:
+            return
+
+        pos = self._node_positions(w, h)
+        n_layers = len(self._layers)
+
+        # ── Background subtle grid ──────────────────────────────────────────
+        grid_color = "#0d1428"
+        for gx in range(0, w, 40):
+            self.create_line(gx, 0, gx, h, fill=grid_color)
+        for gy in range(0, h, 40):
+            self.create_line(0, gy, w, gy, fill=grid_color)
+
+        # ── Draw connections (edges) ────────────────────────────────────────
+        edge_color = "#1a2744"
+        for li in range(n_layers - 1):
+            for ni, (x1, y1) in enumerate(pos[li]):
+                for nj, (x2, y2) in enumerate(pos[li + 1]):
+                    self.create_line(x1, y1, x2, y2, fill=edge_color, width=1)
+
+        # ── Draw animated pulse along edges ────────────────────────────────
+        for p in self._pulses:
+            li   = p["layer_idx"]
+            fn   = p["from_node"]
+            tn   = p["to_node"]
+            prog = p["progress"]
+            col  = p["color"]
+            if li >= n_layers - 1:
+                continue
+            if fn >= len(pos[li]) or tn >= len(pos[li + 1]):
+                continue
+            x1, y1 = pos[li][fn]
+            x2, y2 = pos[li + 1][tn]
+            # Interpolate position
+            px = x1 + (x2 - x1) * prog
+            py = y1 + (y2 - y1) * prog
+            # Draw glowing trail
+            for trail_step in range(5):
+                t_prog = prog - trail_step * 0.04
+                if t_prog < 0:
+                    break
+                tx = x1 + (x2 - x1) * t_prog
+                ty = y1 + (y2 - y1) * t_prog
+                alpha = 1.0 - trail_step * 0.2
+                trail_col = self._lerp_color(col, C_BG, 1.0 - alpha * 0.8)
+                r = max(1, int(4 * alpha))
+                self.create_oval(tx - r, ty - r, tx + r, ty + r,
+                                 fill=trail_col, outline="")
+
+        # ── Draw nodes ─────────────────────────────────────────────────────
+        for li in range(n_layers):
+            for ni, (x, y) in enumerate(pos[li]):
+                # Determine node brightness based on state and active pulses
+                is_active = any(
+                    p["layer_idx"] == li and (p["from_node"] == ni or p["to_node"] == ni)
+                    for p in self._pulses
+                )
+                if self._state == "running":
+                    base_glow = 0.3 + 0.15 * math.sin(self._phase + li * 0.8 + ni * 0.4)
+                    if is_active:
+                        base_glow = 1.0
+                elif self._state == "idle":
+                    base_glow = 0.1 + 0.08 * math.sin(self._phase * 0.5 + li * 0.5)
+                else:
+                    base_glow = 0.08
+
+                # Outer glow ring (only when running/active)
+                if self._state == "running" and base_glow > 0.5:
+                    glow_r = 10
+                    glow_col = self._lerp_color(C_BG, C_ACCENT, base_glow * 0.4)
+                    self.create_oval(x - glow_r, y - glow_r, x + glow_r, y + glow_r,
+                                     fill=glow_col, outline="")
+
+                # Node body
+                node_r = 5
+                if li == 0:
+                    # Input layer — blue tint
+                    node_col = self._lerp_color(C_BORDER, C_ACCENT2, base_glow)
+                elif li == n_layers - 1:
+                    # Output layer — gold tint
+                    node_col = self._lerp_color(C_BORDER, C_GOLD, base_glow)
+                else:
+                    # Hidden layers — teal
+                    node_col = self._lerp_color(C_BORDER, C_ACCENT, base_glow)
+
+                self.create_oval(x - node_r, y - node_r, x + node_r, y + node_r,
+                                 fill=node_col, outline=C_BG, width=1)
+
+        # ── Layer labels ───────────────────────────────────────────────────
+        label_y = h - 14
+        for li, n_nodes in enumerate(self._layers):
+            x = pos[li][0][0]
+            if li == 0:
+                lbl = f"IN\n{n_nodes}"
+            elif li == n_layers - 1:
+                lbl = f"OUT\n{n_nodes}"
+            else:
+                lbl = f"L{li}\n{n_nodes}"
+            self.create_text(x, label_y, text=lbl.replace("\n", " "),
+                             font=("Consolas", 7), fill=C_MUTED, anchor="s")
+
+        # ── Status overlay (top-right) ─────────────────────────────────────
+        if self._state == "running":
+            status_text = f"TRAINING  acc={self._last_acc:.1%}  loss={self._last_loss:.4f}"
+            status_col  = C_SUCCESS
+        elif self._state == "idle":
+            status_text = "IDLE — waiting for tasks"
+            status_col  = C_MUTED
+        elif self._state == "connecting":
+            status_text = "CONNECTING TO NETWORK…"
+            status_col  = C_WARN
+        else:
+            status_text = "STOPPED"
+            status_col  = C_ERROR
+
+        self.create_text(w - 8, 10, text=status_text,
+                         font=("Consolas", 8), fill=status_col, anchor="ne")
+
+        # ── Architecture label (top-left) ──────────────────────────────────
+        arch_str = "→".join(str(n) for n in self._layers)
+        self.create_text(8, 10, text=f"arch: {arch_str}",
+                         font=("Consolas", 8), fill=C_MUTED, anchor="nw")
+
+
+# ---------------------------------------------------------------------------
+# Live status bar
+# ---------------------------------------------------------------------------
+
+class StatusBar(tk.Frame):
+    """
+    A single-row status bar at the bottom of the window showing live metrics.
+    Segments: [state pill] | Tasks: N | Epoch: N/N | Acc: N% | GWC: N | Uptime: HH:MM
+    """
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, bg="#07101f", **kwargs)
+        self._segments = {}
+        self._build()
+
+    def _build(self):
+        # Left side
+        left = tk.Frame(self, bg="#07101f")
+        left.pack(side="left", padx=8)
+
+        self._state_lbl = tk.Label(
+            left, text="● IDLE", font=("Consolas", 8, "bold"),
+            fg=C_MUTED, bg="#07101f", padx=6, pady=3,
+        )
+        self._state_lbl.pack(side="left", padx=(0, 12))
+
+        for key, label in [
+            ("tasks",   "Tasks"),
+            ("epoch",   "Epoch"),
+            ("acc",     "Accuracy"),
+            ("gwc",     "Est. GWC"),
+            ("uptime",  "Uptime"),
+            ("latency", "Latency"),
+        ]:
+            seg = tk.Frame(self, bg="#07101f")
+            seg.pack(side="left", padx=10)
+            tk.Label(seg, text=label.upper(), font=("Consolas", 7),
+                     fg="#3a4a6b", bg="#07101f").pack(anchor="w")
+            val = tk.Label(seg, text="—", font=("Consolas", 9, "bold"),
+                           fg=C_MUTED, bg="#07101f")
+            val.pack(anchor="w")
+            self._segments[key] = val
+
+        # Right side — version
+        right = tk.Frame(self, bg="#07101f")
+        right.pack(side="right", padx=12)
+        tk.Label(right, text=f"GreenWaveCoin Worker v{APP_VERSION}  •  greenwavecoin.com  •  Polygon",
+                 font=("Consolas", 7), fg="#2a3a5a", bg="#07101f").pack()
+
+    def update_state(self, state: str):
+        colors = {
+            "running":    (C_SUCCESS, "● RUNNING"),
+            "idle":       (C_MUTED,   "● IDLE"),
+            "connecting": (C_WARN,    "● CONNECTING"),
+            "stopped":    (C_ERROR,   "● STOPPED"),
+        }
+        col, text = colors.get(state, (C_MUTED, f"● {state.upper()}"))
+        self._state_lbl.configure(text=text, fg=col)
+
+    def update(self, **kwargs):
+        """Update individual segments. Keys: tasks, epoch, acc, gwc, uptime, latency."""
+        color_map = {
+            "tasks":   C_ACCENT,
+            "epoch":   C_ACCENT2,
+            "acc":     C_SUCCESS,
+            "gwc":     C_GOLD,
+            "uptime":  C_MUTED,
+            "latency": C_MUTED,
+        }
+        for key, value in kwargs.items():
+            if key in self._segments:
+                self._segments[key].configure(
+                    text=str(value),
+                    fg=color_map.get(key, C_TEXT),
+                )
+
+
+# ---------------------------------------------------------------------------
 # Main application
 # ---------------------------------------------------------------------------
 
@@ -549,8 +902,8 @@ class GWCWorkerApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         self.root.title(f"GreenWaveCoin Worker  v{APP_VERSION}")
-        self.root.geometry("820x700")
-        self.root.minsize(720, 600)
+        self.root.geometry("860x680")
+        self.root.minsize(720, 560)
         self.root.configure(bg=C_BG)
 
         # State
@@ -567,6 +920,8 @@ class GWCWorkerApp:
         self._latency_ms       = 0
         self._acc_history: List[float] = []
         self._tray_icon        = None
+        self._current_acc      = 0.0
+        self._current_loss     = 0.0
 
         self._build_ui()
         self._poll_log_queue()
@@ -687,7 +1042,7 @@ class GWCWorkerApp:
 
         # ── Main content area ────────────────────────────────────────────────
         content = tk.Frame(self.root, bg=C_BG)
-        content.pack(fill="both", expand=True, padx=20, pady=(0, 14))
+        content.pack(fill="both", expand=True, padx=20, pady=(0, 0))
         content.columnconfigure(0, weight=3)
         content.columnconfigure(1, weight=2)
         content.rowconfigure(0, weight=0)
@@ -696,10 +1051,12 @@ class GWCWorkerApp:
         # Left column
         left_col = tk.Frame(content, bg=C_BG)
         left_col.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=(0, 10))
+        left_col.rowconfigure(1, weight=1)
+        left_col.rowconfigure(2, weight=2)
 
         # ── Current task panel ───────────────────────────────────────────────
         task_panel = self._panel(left_col, "Current Task")
-        task_panel.pack(fill="x", pady=(0, 8))
+        task_panel.grid(row=0, column=0, sticky="ew", pady=(0, 6))
 
         self._task_id_lbl = tk.Label(task_panel, text="—  Waiting for task",
                                       font=("Segoe UI", 10, "bold"),
@@ -737,9 +1094,18 @@ class GWCWorkerApp:
                                        fg=C_ACCENT, bg=C_PANEL)
         self._live_acc_lbl.pack(side="right")
 
+        # ── Neural Network Visualizer ─────────────────────────────────────────
+        nn_panel = self._panel(left_col, "Neural Network — Live Compute")
+        nn_panel.grid(row=1, column=0, sticky="nsew", pady=(0, 6))
+        left_col.rowconfigure(1, weight=1)
+
+        self._nn_canvas = NeuralNetCanvas(nn_panel, height=180)
+        self._nn_canvas.pack(fill="both", expand=True, padx=4, pady=(4, 8))
+
         # ── Activity log ─────────────────────────────────────────────────────
         log_panel = self._panel(left_col, "Activity Log")
-        log_panel.pack(fill="both", expand=True)
+        log_panel.grid(row=2, column=0, sticky="nsew")
+        left_col.rowconfigure(2, weight=2)
 
         self.log_text = scrolledtext.ScrolledText(
             log_panel, font=("Consolas", 8),
@@ -784,11 +1150,9 @@ class GWCWorkerApp:
         self._chart = AccuracyChart(chart_panel, height=160)
         self._chart.pack(fill="both", expand=True, padx=4, pady=4)
 
-        # ── Footer ────────────────────────────────────────────────────────────
-        footer = tk.Frame(self.root, bg=C_BG)
-        footer.pack(fill="x", padx=20, pady=(0, 8))
-        tk.Label(footer, text=f"GreenWaveCoin Worker v{APP_VERSION}  •  greenwavecoin.com  •  Polygon Network",
-                 font=("Segoe UI", 8), fg=C_BORDER, bg=C_BG).pack(side="left")
+        # ── Status bar (bottom) ───────────────────────────────────────────────
+        self._statusbar = StatusBar(self.root)
+        self._statusbar.pack(fill="x", side="bottom")
 
         # ── Initial log messages ──────────────────────────────────────────────
         self._log("HEADER", f"GreenWaveCoin Worker v{APP_VERSION} ready.")
@@ -875,13 +1239,19 @@ class GWCWorkerApp:
             elapsed = int(time.time() - self._start_time)
             h, rem  = divmod(elapsed, 3600)
             m, s    = divmod(rem, 60)
-            self._stat_uptime.configure(
-                text=f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
-            )
+            uptime_str = f"{h:02d}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
+            self._stat_uptime.configure(text=uptime_str)
             # tasks/hr
             if elapsed > 0:
                 rate = self._tasks_completed / (elapsed / 3600)
                 self._stat_rate.configure(text=f"{rate:.1f}")
+            # Update status bar
+            self._statusbar.update(
+                tasks=f"{self._tasks_completed} done / {self._tasks_failed} failed",
+                gwc=f"{self._gwc_earned:.2f}",
+                uptime=uptime_str,
+                latency=f"{self._latency_ms}ms" if self._latency_ms else "—",
+            )
         self.root.after(1000, self._tick_uptime)
 
     # -----------------------------------------------------------------------
@@ -973,6 +1343,7 @@ class GWCWorkerApp:
                 ok = r.status_code == 200
             except Exception:
                 ok, ms = False, 0
+            self._latency_ms = ms
             self.root.after(0, lambda: self._update_net_badge(ok, ms))
         threading.Thread(target=_do_ping, daemon=True).start()
         self.root.after(15000, self._ping_network)
@@ -1008,6 +1379,7 @@ class GWCWorkerApp:
             color = C_ERROR
             label = "⬤  Network unreachable"
         self._net_lbl.configure(text=label, fg=color)
+        self._statusbar.update(latency=f"{ms}ms" if ok else "offline")
 
     # -----------------------------------------------------------------------
     # Worker control
@@ -1043,6 +1415,8 @@ class GWCWorkerApp:
         self._dot.set_state("connecting")
         self._status_lbl.configure(text="Connecting…", fg=C_WARN)
         self._progress_bar.reset()
+        self._nn_canvas.set_state("connecting")
+        self._statusbar.update_state("connecting")
 
         self._worker_thread = threading.Thread(
             target=self._worker_loop, args=(wallet,), daemon=True
@@ -1064,6 +1438,8 @@ class GWCWorkerApp:
         self._task_id_lbl.configure(text="—  Stopped")
         self._epoch_lbl.configure(text="—")
         self._live_acc_lbl.configure(text="—")
+        self._nn_canvas.set_state("stopped")
+        self._statusbar.update_state("stopped")
         self._log("WARNING",
                   f"Worker stopped.  Completed: {self._tasks_completed}  "
                   f"Failed: {self._tasks_failed}  "
@@ -1074,11 +1450,17 @@ class GWCWorkerApp:
     # -----------------------------------------------------------------------
 
     def _on_epoch(self, epoch: int, total: int, acc: float):
+        self._current_acc = acc
         pct = epoch / total
         self.root.after(0, lambda: self._progress_bar.set_progress(pct))
         self.root.after(0, lambda: self._epoch_lbl.configure(text=f"{epoch} / {total}"))
         self.root.after(0, lambda: self._live_acc_lbl.configure(
             text=f"{acc:.2%}", fg=C_ACCENT))
+        self.root.after(0, lambda: self._nn_canvas.set_metrics(acc, self._current_loss))
+        self.root.after(0, lambda: self._statusbar.update(
+            epoch=f"{epoch}/{total}",
+            acc=f"{acc:.1%}",
+        ))
 
     # -----------------------------------------------------------------------
     # Stats update (main thread)
@@ -1136,6 +1518,8 @@ class GWCWorkerApp:
         self._log("SUCCESS", "Connected to coordinator!  Fetching tasks…")
         self.root.after(0, lambda: self._dot.set_state("running"))
         self.root.after(0, lambda: self._status_lbl.configure(text="Running", fg=C_ACCENT))
+        self.root.after(0, lambda: self._nn_canvas.set_state("running"))
+        self.root.after(0, lambda: self._statusbar.update_state("running"))
 
         no_task_count = 0
 
@@ -1154,6 +1538,8 @@ class GWCWorkerApp:
                     self._log("INFO", msg)
                     self.root.after(0, lambda m=msg: self._task_id_lbl.configure(
                         text=f"⏳  {m[:50]}…" if len(msg) > 50 else f"⏳  {msg}"))
+                    self.root.after(0, lambda: self._statusbar.update(
+                        epoch="—", acc="—"))
                     for _ in range(POLL_INTERVAL):
                         if not self._running:
                             break
@@ -1190,6 +1576,11 @@ class GWCWorkerApp:
                 self.root.after(0, lambda: self._live_acc_lbl.configure(
                     text="Training…", fg=C_WARN))
 
+                # Update neural net visualizer with actual architecture
+                # Input=20 features, hidden=layers, output=4 classes
+                viz_arch = [min(20, 8)] + [min(n, 12) for n in layers] + [4]
+                self.root.after(0, lambda a=viz_arch: self._nn_canvas.set_architecture(a))
+
                 try:
                     if TORCH_AVAILABLE:
                         metrics = train_and_evaluate(config, progress_cb=self._on_epoch)
@@ -1202,12 +1593,18 @@ class GWCWorkerApp:
                     time.sleep(5)
                     continue
 
-                acc = metrics.get("accuracy", 0)
-                t   = metrics.get("training_time_seconds", 0)
+                acc  = metrics.get("accuracy", 0)
+                loss = metrics.get("final_loss", 0)
+                t    = metrics.get("training_time_seconds", 0)
+                self._current_acc  = acc
+                self._current_loss = loss
                 self._log("SUCCESS", f"✓ Task done  accuracy={acc:.2%}  time={t:.1f}s")
                 self.root.after(0, lambda a=acc: self._live_acc_lbl.configure(
                     text=f"{a:.2%}", fg=C_SUCCESS))
                 self.root.after(0, lambda: self._progress_bar.set_progress(1.0))
+                self.root.after(0, lambda a=acc, l=loss: self._nn_canvas.set_metrics(a, l))
+                self.root.after(0, lambda a=acc: self._statusbar.update(
+                    acc=f"{a:.1%}", epoch="done"))
 
                 success = client.submit_result(task_id, config, metrics)
                 if success:
