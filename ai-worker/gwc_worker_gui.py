@@ -1045,18 +1045,19 @@ class GWCWorkerApp:
         content.pack(fill="both", expand=True, padx=20, pady=(0, 0))
         content.columnconfigure(0, weight=3)
         content.columnconfigure(1, weight=2)
-        content.rowconfigure(0, weight=0)
-        content.rowconfigure(1, weight=1)
+        content.rowconfigure(0, weight=1)
 
         # Left column
         left_col = tk.Frame(content, bg=C_BG)
-        left_col.grid(row=0, column=0, rowspan=2, sticky="nsew", padx=(0, 10))
-        left_col.rowconfigure(1, weight=1)
-        left_col.rowconfigure(2, weight=2)
+        left_col.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        left_col.columnconfigure(0, weight=1)
+        left_col.rowconfigure(0, weight=0)   # task panel — fixed height
+        left_col.rowconfigure(1, weight=2)   # nn canvas — grows
+        left_col.rowconfigure(2, weight=3)   # activity log — grows most
 
         # ── Current task panel ───────────────────────────────────────────────
         task_panel = self._panel(left_col, "Current Task")
-        task_panel.grid(row=0, column=0, sticky="ew", pady=(0, 6))
+        task_panel.grid(row=0, column=0, sticky="nsew", pady=(0, 6))
 
         self._task_id_lbl = tk.Label(task_panel, text="—  Waiting for task",
                                       font=("Segoe UI", 10, "bold"),
@@ -1097,15 +1098,13 @@ class GWCWorkerApp:
         # ── Neural Network Visualizer ─────────────────────────────────────────
         nn_panel = self._panel(left_col, "Neural Network — Live Compute")
         nn_panel.grid(row=1, column=0, sticky="nsew", pady=(0, 6))
-        left_col.rowconfigure(1, weight=1)
 
-        self._nn_canvas = NeuralNetCanvas(nn_panel, height=180)
+        self._nn_canvas = NeuralNetCanvas(nn_panel)
         self._nn_canvas.pack(fill="both", expand=True, padx=4, pady=(4, 8))
 
         # ── Activity log ─────────────────────────────────────────────────────
         log_panel = self._panel(left_col, "Activity Log")
         log_panel.grid(row=2, column=0, sticky="nsew")
-        left_col.rowconfigure(2, weight=2)
 
         self.log_text = scrolledtext.ScrolledText(
             log_panel, font=("Consolas", 8),
@@ -1123,7 +1122,9 @@ class GWCWorkerApp:
 
         # Right column
         right_col = tk.Frame(content, bg=C_BG)
-        right_col.grid(row=0, column=1, rowspan=2, sticky="nsew")
+        right_col.grid(row=0, column=1, sticky="nsew")
+        right_col.columnconfigure(0, weight=1)
+        right_col.rowconfigure(1, weight=1)   # chart expands
 
         # ── Stats cards ───────────────────────────────────────────────────────
         stats_panel = self._panel(right_col, "Session Stats")
