@@ -117,6 +117,61 @@ if (process.env.NODE_ENV !== 'test') {
     }
   }, 5 * 60 * 1000);
 
+  // ---------------------------------------------------------------------------
+  // Auto task generator — keeps the queue topped up with meaningful work
+  // Each task is designed to take 45–120 seconds of real CPU on a typical machine
+  // ---------------------------------------------------------------------------
+  const MIN_QUEUE_SIZE = 5;   // refill when queue drops below this
+  const TARGET_QUEUE   = 20;  // top up to this many tasks
+
+  // Diverse network architectures to explore — ordered from lighter to heavier
+  const TASK_TEMPLATES = [
+    // ~45s tasks
+    { layers: [128, 64],           activation: 'relu',       dropout: 0.20, lr: 0.001,  bs: 64,  epochs: 80,  n_samples: 8000  },
+    { layers: [64, 64, 32],        activation: 'tanh',       dropout: 0.30, lr: 0.0005, bs: 32,  epochs: 60,  n_samples: 6000  },
+    // ~75s tasks
+    { layers: [256, 128],          activation: 'relu',       dropout: 0.25, lr: 0.001,  bs: 128, epochs: 100, n_samples: 10000 },
+    { layers: [128, 128, 64],      activation: 'leaky_relu', dropout: 0.20, lr: 0.0008, bs: 64,  epochs: 90,  n_samples: 8000  },
+    { layers: [512, 256, 128],     activation: 'relu',       dropout: 0.10, lr: 0.0003, bs: 256, epochs: 70,  n_samples: 12000 },
+    // ~120s tasks
+    { layers: [256, 256, 128, 64], activation: 'tanh',       dropout: 0.30, lr: 0.0005, bs: 64,  epochs: 120, n_samples: 15000 },
+    { layers: [512, 256, 64],      activation: 'elu',        dropout: 0.15, lr: 0.0002, bs: 128, epochs: 100, n_samples: 12000 },
+    { layers: [128, 64, 64, 32],   activation: 'relu',       dropout: 0.25, lr: 0.001,  bs: 32,  epochs: 150, n_samples: 10000 },
+  ];
+
+  function generateTaskPayload(): string {
+    const tpl = TASK_TEMPLATES[Math.floor(Math.random() * TASK_TEMPLATES.length)];
+    const seed = Math.floor(Math.random() * 999999) + 1;
+    return JSON.stringify({
+      layers:        tpl.layers,
+      activation:    tpl.activation,
+      dropout:       tpl.dropout,
+      learning_rate: tpl.lr,
+      batch_size:    tpl.bs,
+      epochs:        tpl.epochs,
+      input_size:    20,
+      output_size:   4,
+      dataset_seed:  seed,
+      n_samples:     tpl.n_samples,
+    });
+  }
+
+  function refillQueue() {
+    const current = taskService.getQueueLength();
+    if (current >= MIN_QUEUE_SIZE) return;
+    const toAdd = TARGET_QUEUE - current;
+    for (let i = 0; i < toAdd; i++) {
+      taskService.addTask(generateTaskPayload());
+    }
+    console.log(`[TASK-GEN] Queue was ${current}, added ${toAdd} tasks (queue now ${TARGET_QUEUE})`);
+  }
+
+  // Seed immediately on startup so workers never wait
+  refillQueue();
+
+  // Check every 30 seconds and top up if needed
+  setInterval(refillQueue, 30 * 1000);
+
   // Auto-epoch scheduler: finalise and publish rewards on a configurable interval
   // Default: every 24 hours. Set EPOCH_INTERVAL_HOURS in .env to change.
   const epochIntervalHours = parseFloat(process.env.EPOCH_INTERVAL_HOURS || '24');

@@ -90,10 +90,10 @@ except ImportError:
 # ---------------------------------------------------------------------------
 BACKEND_URL    = "https://api.greenwavecoin.com"
 WORKER_API_KEY = "gwc-worker-2025"
-APP_VERSION    = "1.0.7"
+APP_VERSION    = "1.0.8"
 POLL_INTERVAL  = 30
 MAX_RETRIES    = 3
-GWC_PER_TASK   = 0.5   # estimated GWC reward per completed task
+GWC_PER_TASK   = 0.05  # estimated GWC reward per completed task (~25-35 GWC/day at full speed)
 GITHUB_RELEASE_URL = "https://api.github.com/repos/xDejaVu89/greenwavecoin/releases/latest"
 DOWNLOAD_PAGE     = "https://greenwavecoin.com"
 
@@ -143,30 +143,75 @@ def save_config(data: dict):
 # Training logic
 # ---------------------------------------------------------------------------
 
-def generate_benchmark_dataset(n_samples=1000, n_features=20, n_classes=4, seed=42):
+def generate_benchmark_dataset(n_samples=8000, n_features=20, n_classes=4, seed=42):
+    """Generate a reproducible classification dataset.
+    Uses numpy vectorised ops so large n_samples is fast to generate.
+    """
     rng = np.random.RandomState(seed)
-    X = rng.randn(n_samples, n_features)
-    w = rng.randn(n_features, n_classes)
-    logits = [[sum(X[i][k] * w[k][j] for k in range(n_features)) for j in range(n_classes)]
-              for i in range(n_samples)]
-    y = [max(range(n_classes), key=lambda j: logits[i][j]) for i in range(n_samples)]
-    return X, y
+    X = rng.randn(n_samples, n_features).astype(np.float32)
+    w = rng.randn(n_features, n_classes).astype(np.float32)
+    logits = X @ w  # (n_samples, n_classes)
+    y = logits.argmax(axis=1).tolist()
+    return X.tolist(), y
 
 
 def numpy_fallback_evaluate(config: dict, progress_cb=None) -> dict:
-    layers = config.get("layers", [64, 32])
-    epochs = min(config.get("epochs", 5), 3)
+    """Numpy-only fallback: does real matrix multiply training loop so it takes meaningful time."""
+    layers     = config.get("layers", [64, 32])
+    epochs     = min(int(config.get("epochs", 80)), 150)  # honour task epochs, cap at 150
+    n_samples  = int(config.get("n_samples", 8000))
+    seed       = int(config.get("dataset_seed", 42))
+    lr         = float(config.get("learning_rate", 0.001))
+    batch_size = int(config.get("batch_size", 64))
+
+    X_np, y_np = generate_benchmark_dataset(n_samples=n_samples, seed=seed)
+    X = np.array(X_np, dtype=np.float32)
+    y = np.array(y_np, dtype=np.int32)
+
+    # Simple 1-hidden-layer numpy network
+    rng   = np.random.RandomState(seed)
+    n_in  = X.shape[1]
+    n_h   = layers[0] if layers else 64
+    n_out = 4
+    W1 = rng.randn(n_in, n_h).astype(np.float32) * 0.1
+    b1 = np.zeros(n_h, dtype=np.float32)
+    W2 = rng.randn(n_h, n_out).astype(np.float32) * 0.1
+    b2 = np.zeros(n_out, dtype=np.float32)
+
+    def softmax(z):
+        e = np.exp(z - z.max(axis=1, keepdims=True))
+        return e / e.sum(axis=1, keepdims=True)
+
+    start = time.time()
     for ep in range(1, epochs + 1):
-        time.sleep(0.4)
-        if progress_cb:
-            progress_cb(ep, epochs, 0.65 + ep * 0.05)
-    accuracy = round(0.70 + 0.15 * (len(layers) / 4), 4)
+        idx = np.random.permutation(n_samples)
+        for start_i in range(0, n_samples, batch_size):
+            bi = idx[start_i:start_i + batch_size]
+            xb, yb = X[bi], y[bi]
+            h  = np.maximum(0, xb @ W1 + b1)  # ReLU
+            out = softmax(h @ W2 + b2)
+            # Cross-entropy gradient
+            dout = out.copy(); dout[np.arange(len(yb)), yb] -= 1; dout /= len(yb)
+            dW2 = h.T @ dout; db2 = dout.sum(0)
+            dh  = dout @ W2.T * (h > 0)
+            dW1 = xb.T @ dh;  db1 = dh.sum(0)
+            W1 -= lr * dW1; b1 -= lr * db1
+            W2 -= lr * dW2; b2 -= lr * db2
+        if progress_cb and ep % max(1, epochs // 10) == 0:
+            h   = np.maximum(0, X @ W1 + b1)
+            acc = (softmax(h @ W2 + b2).argmax(axis=1) == y).mean()
+            progress_cb(ep, epochs, float(acc))
+
+    h   = np.maximum(0, X @ W1 + b1)
+    out = softmax(h @ W2 + b2)
+    accuracy = float((out.argmax(axis=1) == y).mean())
+    loss     = float(-np.log(out[np.arange(n_samples), y] + 1e-9).mean())
     return {
-        "accuracy": accuracy,
-        "training_time_seconds": round(0.4 * epochs, 2),
+        "accuracy": round(accuracy, 6),
+        "training_time_seconds": round(time.time() - start, 2),
         "epochs_completed": epochs,
-        "final_loss": round(0.5 - accuracy * 0.3, 4),
-        "param_count": sum(layers) if layers else 0,
+        "final_loss": round(loss, 6),
+        "param_count": n_in * n_h + n_h + n_h * n_out + n_out,
         "torch_available": False,
         "mode": "numpy_fallback",
     }
@@ -176,7 +221,8 @@ def train_and_evaluate(config: dict, progress_cb=None) -> dict:
     layers          = config.get("layers", [64, 32])
     activation_name = config.get("activation", "relu")
     learning_rate   = float(config.get("learning_rate", 0.001))
-    epochs          = min(int(config.get("epochs", 5)), 10)
+    n_samples       = int(config.get("n_samples", 8000))  # use task-specified dataset size
+    epochs          = min(int(config.get("epochs", 80)), 200)  # honour task epochs, cap at 200
     batch_size      = int(config.get("batch_size", 32))
     dropout_rate    = float(config.get("dropout", 0.0))
     seed            = int(config.get("dataset_seed", 42))
@@ -192,7 +238,7 @@ def train_and_evaluate(config: dict, progress_cb=None) -> dict:
     }
     ActClass = activation_map.get(activation_name, nn.ReLU)
 
-    X_np, y_np = generate_benchmark_dataset(seed=seed)
+    X_np, y_np = generate_benchmark_dataset(n_samples=n_samples, seed=seed)
     n_features = len(X_np[0]) if X_np else 20
     n_classes  = 4
 
