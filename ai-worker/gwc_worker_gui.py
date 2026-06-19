@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-GreenWaveCoin AI Worker — Desktop GUI v1.0.7
+GreenWaveCoin AI Worker — Desktop GUI v1.0.10
 =============================================
 A polished, engaging Windows/Mac/Linux desktop app for running the
 GreenWaveCoin distributed AI research worker.
@@ -90,7 +90,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 BACKEND_URL    = "https://api.greenwavecoin.com"
 WORKER_API_KEY = "gwc-worker-2025"
-APP_VERSION    = "1.0.8"
+APP_VERSION    = "1.0.10"
 POLL_INTERVAL  = 30
 MAX_RETRIES    = 3
 GWC_PER_TASK   = 0.05  # estimated GWC reward per completed task (~25-35 GWC/day at full speed)
