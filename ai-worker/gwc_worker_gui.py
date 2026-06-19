@@ -1221,8 +1221,11 @@ class GWCWorkerApp:
 
     def _panel(self, parent, title: str) -> tk.Frame:
         outer = tk.Frame(parent, bg=C_BORDER, padx=1, pady=1)
+        # Make outer frame itself expand when placed with grid sticky=nsew
+        outer.rowconfigure(0, weight=1)
+        outer.columnconfigure(0, weight=1)
         inner = tk.Frame(outer, bg=C_PANEL)
-        inner.pack(fill="both", expand=True)
+        inner.grid(row=0, column=0, sticky="nsew")
         tk.Label(inner, text=title.upper(), font=("Segoe UI", 8, "bold"),
                  fg=C_MUTED, bg=C_PANEL).pack(anchor="w", padx=10, pady=(8, 4))
         ttk.Separator(inner, orient="horizontal").pack(fill="x")
